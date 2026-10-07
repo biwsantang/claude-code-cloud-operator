@@ -196,6 +196,7 @@ func (r *ClaudeRunnerFleetReconciler) converge(ctx context.Context, f *api.Claud
 	return r.Update(ctx, current)
 }
 func (r *ClaudeRunnerFleetReconciler) drain(ctx context.Context, f *api.ClaudeRunnerFleet) (ctrl.Result, error) {
+	f.Status.ObservedGeneration = f.Generation
 	dep := &appsv1.Deployment{}
 	if err := r.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Name + "-orchestrator"}, dep); err == nil && contract.Owns(f, dep, "ClaudeRunnerFleet") && dep.Spec.Replicas != nil && *dep.Spec.Replicas != 0 {
 		dep.Spec.Replicas = ptr.To(int32(0))

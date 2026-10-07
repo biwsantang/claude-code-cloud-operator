@@ -6,14 +6,14 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T13:02:00+07:00"
 sources:
   - resource: "https://code.claude.com/docs/en/self-hosted-environments-testing"
 ---
 
 # Verification strategy
 
-The repository currently has documentation only. No runtime tests have run.
+The implementation and its verification are in progress. Read [observed evidence and limits](implementation-evidence.md); the table below defines acceptance layers rather than claiming they are all complete.
 
 | Layer | Planned evidence |
 | --- | --- |

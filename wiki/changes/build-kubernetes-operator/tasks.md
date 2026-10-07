@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T12:29:00+07:00"
+  at: "2026-10-07T13:02:00+07:00"
 ---
 
 # Implementation tasks
@@ -29,20 +29,20 @@ Tasks are checked only when their complete verification passes. External release
 
 ## 3. Durable intake
 
-- [x] 3.1 Implement adapter input checks and sanitized receipt naming; verification: missing/expired/malformed inputs and permanent/transient error classifications.
+- [ ] 3.1 Implement adapter input checks and sanitized receipt naming; verification: missing/expired/malformed inputs and permanent/transient error classifications.
 - [x] 3.2 Persist incomplete CR, immutable owned Secret and accepted snapshot; verification: concurrent redelivery, response loss, ownership collisions, partial-write repair and no JWT leakage.
-- [ ] 3.3 Restrict actor roles and one-time receipt completion through admission; verification: untrusted updates, Fleet UID mismatch and snapshot changes denied.
+- [x] 3.3 Restrict actor roles and one-time receipt completion through admission; verification: untrusted updates, Fleet UID mismatch and snapshot changes denied.
 
 ## 4. Work-order lifecycle
 
 - [x] 4.1 Implement CAS launch fence and single Pod-create path with transport retries disabled; verification: two controllers and crashes at every write boundary never resubmit an order.
 - [x] 4.2 Observe late/missing/terminal Pods and immutable UIDs; verification: ambiguous API outcomes and forced Pod deletion produce no replacement Pod.
-- [ ] 4.3 Implement credential removal, tombstone floors, capped retention and conservative pending cleanup; verification: replay after cleanup, expired orders, running/startup races and projected token rotation.
-- [ ] 4.4 Implement suspend, drain/abort deletion and finalizers; verification: scoped cleanup, waiting reasons, controller restart and uninstall instructions.
+- [x] 4.3 Implement credential removal, tombstone floors, capped retention and conservative pending cleanup; verification: replay after cleanup, expired orders, running/startup races and projected token rotation.
+- [x] 4.4 Implement suspend, drain/abort deletion and finalizers; verification: scoped cleanup, waiting reasons, controller restart and uninstall instructions.
 
 ## 5. Runtime and security
 
-- [ ] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
+- [x] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
 - [x] 5.2 Generate Pod security/storage/resources and configurable placement; verification: no API/environment key/cloud identity access from sessions and no fleet concurrency cap introduced.
 - [x] 5.3 Establish proxy/egress integration and network acceptance report format; verification: direct/proxied denial and fresh-Pod startup tests on enforced-network clusters, not envtest alone.
 
@@ -61,3 +61,5 @@ Tasks are checked only when their complete verification passes. External release
 
 Verified candidate slices are recorded in [implementation evidence](../../testing/implementation-evidence.md). Remaining task checkboxes deliberately retain their full verification criteria. Do not start live dispatch while intake,
 launch fencing and security gates remain incomplete. A working demo is not the production acceptance gate.
+
+The final audit reopens 3.1 for end-to-end server-time/clock-skew handling: parsing the native HTTP Date does not yet make admission and launch checks use the same time basis. Task 6.2 has minimum-version Helm/raw install and removal evidence, but upper-version raw-manifest lifecycle verification remains pending. See the evidence ledger for the exact matrix.

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/url"
@@ -33,6 +34,10 @@ const (
 
 var digestImage = regexp.MustCompile(`^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$`)
 var safeID = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,256}$`)
+
+// Keep infrastructure failures distinct from an invalid assertion without exposing API response text.
+var ErrPrerequisiteAPI = errors.New("prerequisite API temporarily unavailable")
+var ErrIntakePaused = errors.New("fleet intake paused")
 
 func Hash(b []byte) string                      { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
 func Name(pool, order string) string            { return "order-" + Hash([]byte(pool + "\x00" + order))[:48] }
@@ -136,6 +141,9 @@ type Report struct {
 func NetworkApproved(ctx context.Context, c client.Reader, f *api.ClaudeRunnerFleet, now time.Time) error {
 	cm := &corev1.ConfigMap{}
 	if err := c.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Spec.NetworkReportRef.Name}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ErrPrerequisiteAPI
+		}
 		return errors.New("network report unavailable")
 	}
 	var r Report
@@ -152,10 +160,16 @@ func InputsReady(ctx context.Context, c client.Reader, f *api.ClaudeRunnerFleet,
 		return err
 	}
 	if f.Spec.Suspended || !f.DeletionTimestamp.IsZero() {
-		return errors.New("fleet suspended or deleting")
+		return ErrIntakePaused
 	}
 	s := &corev1.Secret{}
-	if err := c.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Spec.EnvironmentSecretRef.Name}, s); err != nil || len(s.Data[EnvironmentKey]) == 0 {
+	if err := c.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Spec.EnvironmentSecretRef.Name}, s); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ErrPrerequisiteAPI
+		}
+		return errors.New("environment credential unavailable")
+	}
+	if len(s.Data[EnvironmentKey]) == 0 {
 		return errors.New("environment credential unavailable")
 	}
 	if err := NetworkApproved(ctx, c, f, now); err != nil {
@@ -163,7 +177,13 @@ func InputsReady(ctx context.Context, c client.Reader, f *api.ClaudeRunnerFleet,
 	}
 	if f.Spec.Execution.HostConfigRef != nil {
 		cm := &corev1.ConfigMap{}
-		if err := c.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Spec.Execution.HostConfigRef.Name}, cm); err != nil || cm.Immutable == nil || !*cm.Immutable {
+		if err := c.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Spec.Execution.HostConfigRef.Name}, cm); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ErrPrerequisiteAPI
+			}
+			return errors.New("host configuration unavailable")
+		}
+		if cm.Immutable == nil || !*cm.Immutable {
 			return errors.New("host configuration must exist and be immutable")
 		}
 	}

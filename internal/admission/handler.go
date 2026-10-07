@@ -4,12 +4,14 @@ package admission
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/contract"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/controller"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/hook"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +34,18 @@ func (h *Handler) now() time.Time {
 	return time.Now().UTC()
 }
 func deny(reason string) webhook.Response { return webhook.Denied(reason) }
+func readFailure(err error, reason string) webhook.Response {
+	if !apierrors.IsNotFound(err) {
+		return webhook.Errored(503, errors.New("Admission dependency temporarily unavailable"))
+	}
+	return deny(reason)
+}
+func prerequisiteFailure(err error, reason string) webhook.Response {
+	if errors.Is(err, contract.ErrPrerequisiteAPI) || errors.Is(err, contract.ErrIntakePaused) {
+		return webhook.Errored(503, errors.New("Intake prerequisites temporarily unavailable"))
+	}
+	return deny(reason)
+}
 func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Response {
 	if req.Namespace != h.Namespace {
 		return deny("Namespace is outside this operator trust boundary")
@@ -78,7 +92,7 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 			}
 			if !f.Spec.Suspended && !manager {
 				if err := contract.InputsReady(ctx, h.Reader, f, h.now()); err != nil {
-					return deny("Activation prerequisites are missing")
+					return prerequisiteFailure(err, "Activation prerequisites are missing")
 				}
 			}
 		}
@@ -147,20 +161,23 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		}
 		f := &api.ClaudeRunnerFleet{}
 		if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: w.Namespace, Name: w.Spec.FleetName}, f); err != nil {
-			return deny("Fleet unavailable")
+			return readFailure(err, "Fleet unavailable")
 		}
 		if string(f.UID) != w.Spec.FleetUID || !contract.Owns(f, w, "ClaudeRunnerFleet") || w.Spec.PoolID != f.Spec.EnvironmentID || !reflect.DeepEqual(w.Spec.Execution, f.Spec.Execution) {
 			return deny("Fleet identity or policy mismatch")
 		}
 		if err := contract.InputsReady(ctx, h.Reader, f, h.now()); err != nil {
-			return deny("Fleet intake prerequisites are missing")
+			return prerequisiteFailure(err, "Fleet intake prerequisites are missing")
 		}
 		if !w.Spec.ExpiresAt.After(h.now()) || w.Spec.ExpiresAt.After(h.now().Add(time.Duration(w.Spec.Execution.MaxTokenLifetimeSeconds)*time.Second)) {
 			return deny("Receipt expiry is outside bounds")
 		}
 		if w.Spec.Complete {
 			s := &corev1.Secret{}
-			if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: w.Namespace, Name: w.Spec.CredentialSecretRef.Name}, s); err != nil || !controller.CredentialMatches(w, s) {
+			if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: w.Namespace, Name: w.Spec.CredentialSecretRef.Name}, s); err != nil {
+				return readFailure(err, "Credential receipt is unavailable")
+			}
+			if !controller.CredentialMatches(w, s) {
 				return deny("Credential receipt is incomplete or mismatched")
 			}
 			expiry, err := hook.Expiry(s.Data[contract.CredentialKey], "", h.now(), w.Spec.Execution.MaxTokenLifetimeSeconds)
@@ -187,7 +204,7 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		}
 		w := &api.ClaudeWorkOrder{}
 		if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: s.Namespace, Name: owner.Name}, w); err != nil {
-			return deny("Receipt unavailable")
+			return readFailure(err, "Receipt unavailable")
 		}
 		if req.UserInfo.Username != contract.ManagerUser(w.Namespace, contract.HookAccount(w.Spec.FleetName)) || !w.DeletionTimestamp.IsZero() || w.Spec.Complete || w.Status.Terminal || !controller.CredentialMatches(w, s) {
 			return deny("Credential owner, digest or state mismatch")

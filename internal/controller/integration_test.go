@@ -19,6 +19,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,7 +71,8 @@ func TestAPIRecovery(t *testing.T) {
 	manager, err := client.New(managerCfg, client.Options{Scheme: scheme})
 	must(t, err)
 	server := webhook.NewServer(webhook.Options{Host: e.WebhookInstallOptions.LocalServingHost, Port: e.WebhookInstallOptions.LocalServingPort, CertDir: e.WebhookInstallOptions.LocalServingCertDir})
-	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Reader: admin, Namespace: namespace, ManagerAccount: "manager"}})
+	admissionReads := &faultReader{Reader: admin}
+	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Reader: admissionReads, Namespace: namespace, ManagerAccount: "manager"}})
 	serverDone := make(chan error, 1)
 	go func() { serverDone <- server.Start(ctx) }()
 	defer func() {
@@ -156,6 +158,18 @@ func TestAPIRecovery(t *testing.T) {
 		bad.Spec.Execution.Resources.Limits[corev1.ResourceCPU] = resource.MustParse("1")
 		if admin.Update(ctx, bad) == nil {
 			t.Fatal("unsafe CPU limit admitted")
+		}
+		bad = f.DeepCopy()
+		bad.Spec.Suspended = true
+		bad.Spec.Execution.DiagnosticRetentionSeconds = 604801
+		if admin.Update(ctx, bad) == nil {
+			t.Fatal("uncapped diagnostic retention admitted")
+		}
+		bad = f.DeepCopy()
+		bad.Spec.Suspended = true
+		bad.Spec.Execution.MaxTokenLifetimeSeconds = 604801
+		if admin.Update(ctx, bad) == nil {
+			t.Fatal("uncapped token lifetime admitted")
 		}
 		cm := &corev1.ConfigMap{}
 		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.NetworkReportRef.Name}, cm))
@@ -302,6 +316,220 @@ func TestAPIRecovery(t *testing.T) {
 		altered.Status.LaunchAttempted = true
 		if hc.Status().Update(ctx, altered) == nil {
 			t.Fatal("hook can write launch fence")
+		}
+	})
+	t.Run("admission-rejects-fleet-uid-expiry-and-foreign-actors", func(t *testing.T) {
+		f, hc, token := fixture(t, "actors")
+		for _, mutation := range []string{"fleet-uid", "expiry"} {
+			in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "order-" + mutation}
+			r := hook.Run(ctx, &mutatedReceiptClient{Client: hc, mutation: mutation}, in, token, time.Now())
+			if r.Code != hook.Permanent {
+				t.Fatalf("%s mutation accepted or transient", mutation)
+			}
+			w := &api.ClaudeWorkOrder{}
+			err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(in.Pool, in.Order)}, w)
+			if mutation == "fleet-uid" && !apierrors.IsNotFound(err) {
+				t.Fatal("wrong Fleet UID created a receipt")
+			}
+			if mutation == "expiry" {
+				must(t, err)
+				if w.Spec.Complete {
+					t.Fatal("mismatched token expiry completed")
+				}
+			}
+		}
+		w := intake(t, f, hc, token, "order-actor")
+		// Administrator authorization alone cannot perform hook-only receipt updates.
+		if admin.Update(ctx, w.DeepCopy()) == nil {
+			t.Fatal("foreign actor redelivery admitted")
+		}
+		if hc.Delete(ctx, w) == nil {
+			t.Fatal("hook can remove retained receipt")
+		}
+		altered := w.DeepCopy()
+		altered.Spec.Complete = false
+		if hc.Update(ctx, altered) == nil {
+			t.Fatal("completed receipt reopened")
+		}
+		altered = w.DeepCopy()
+		altered.Spec.Execution.SecurityRevision = "mutated"
+		if hc.Update(ctx, altered) == nil {
+			t.Fatal("accepted security snapshot changed")
+		}
+		secret := &corev1.Secret{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, secret))
+		secret.Data[contract.CredentialKey] = []byte("synthetic replacement")
+		if hc.Update(ctx, secret) == nil {
+			t.Fatal("hook mutated immutable credential")
+		}
+	})
+	t.Run("admission-api-read-faults-remain-retryable", func(t *testing.T) {
+		f, hc, token := fixture(t, "api-read-faults")
+		for _, boundary := range []string{"fleet", "environment", "report", "receipt", "credential"} {
+			in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "order-" + boundary}
+			name := contract.Name(in.Pool, in.Order)
+			target := map[string]string{"fleet": f.Name, "environment": f.Spec.EnvironmentSecretRef.Name, "report": f.Spec.NetworkReportRef.Name, "receipt": name, "credential": name + "-credential"}[boundary]
+			admissionReads.arm(target)
+			result := hook.Run(ctx, hc, in, token, time.Now())
+			if result.Code != hook.Retryable {
+				t.Fatalf("%s read failure classified as %d", boundary, result.Code)
+			}
+			if strings.Contains(result.Reason, "sensitive") || strings.Contains(result.Reason, string(token)) {
+				t.Fatal("admission infrastructure response leaked source text")
+			}
+			w := intake(t, f, hc, token, in.Order)
+			if !w.Spec.Complete {
+				t.Fatal("retry after API recovery did not repair intake")
+			}
+		}
+	})
+	t.Run("expired-pending-startup-races", func(t *testing.T) {
+		for _, boundary := range []string{"never-started", "fresh-read", "delete-conflict"} {
+			t.Run(boundary, func(t *testing.T) {
+				f, hc, token := fixture(t, "startup-"+boundary)
+				w := intake(t, f, hc, token, "order-startup")
+				var calls atomic.Int32
+				r := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { calls.Add(1); return manager.Create(ctx, p) }}
+				_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+				must(t, err)
+				r.Now = func() time.Time {
+					return w.Spec.ExpiresAt.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds+1) * time.Second)
+				}
+				if boundary != "never-started" {
+					r.Client = &startupRaceClient{Client: manager, boundary: boundary}
+				}
+				_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+				if boundary == "delete-conflict" {
+					if !apierrors.IsConflict(err) {
+						t.Fatal("startup resourceVersion race did not reject delete")
+					}
+				} else {
+					must(t, err)
+				}
+				// Restart after either the observation or conflict; the fence must survive.
+				r.Client = manager
+				for i := 0; i < 2; i++ {
+					_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+					must(t, err)
+				}
+				must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+				p := &corev1.Pod{}
+				err = manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Name}, p)
+				if boundary == "never-started" {
+					if !apierrors.IsNotFound(err) || !w.Status.Terminal {
+						t.Fatal("expired pending execution remained")
+					}
+				} else {
+					must(t, err)
+					if !p.DeletionTimestamp.IsZero() || p.Status.Phase != corev1.PodRunning || w.Status.Terminal {
+						t.Fatal("observed startup was terminated")
+					}
+				}
+				if calls.Load() != 1 {
+					t.Fatal("expiry recovery resubmitted Pod")
+				}
+			})
+		}
+	})
+	t.Run("abort-restart-preserves-unrelated-resources-and-retention", func(t *testing.T) {
+		f, hc, token := fixture(t, "abort")
+		w := intake(t, f, hc, token, "order-abort")
+		r := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }}
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		p := &corev1.Pod{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Name}, p))
+		p.Status.Phase = corev1.PodRunning
+		must(t, manager.Status().Update(ctx, p))
+		foreign := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "abort-unrelated", Namespace: namespace, Labels: map[string]string{contract.FleetLabel: f.Name}}, Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: "foreign", Image: "example.invalid/foreign"}}}}
+		must(t, admin.Create(ctx, foreign))
+		foreignUID := foreign.UID
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		f.Spec.DeletionPolicy = "Abort"
+		must(t, admin.Update(ctx, f))
+		must(t, admin.Delete(ctx, f))
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme}
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		err = manager.Get(ctx, client.ObjectKeyFromObject(p), p)
+		if err == nil {
+			if p.DeletionTimestamp.IsZero() {
+				t.Fatal("explicit abort did not request termination")
+			}
+			// Envtest has no kubelet; model termination acknowledgement if a grace period remains.
+			must(t, manager.Delete(ctx, p, client.GracePeriodSeconds(0)))
+		} else if !apierrors.IsNotFound(err) {
+			must(t, err)
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(f), f))
+		waiting := apimeta.FindStatusCondition(f.Status.Conditions, "Ready")
+		if waiting == nil || waiting.Reason != "DrainingOrdersAndRetention" || waiting.ObservedGeneration != f.Generation || f.Status.ObservedGeneration != f.Generation {
+			t.Fatal("abort wait did not report current generation")
+		}
+		r = &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme}
+		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !w.Status.Terminal || w.Status.RetainUntil == nil {
+			t.Fatal("abort restart lost diagnostic retention")
+		}
+		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		if manager.Get(ctx, client.ObjectKeyFromObject(w), w) != nil {
+			t.Fatal("retained receipt removed prematurely")
+		}
+		r.Now = func() time.Time { return w.Status.RetainUntil.Add(time.Second) }
+		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		fr = &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme}
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		if err = manager.Get(ctx, client.ObjectKeyFromObject(f), f); !apierrors.IsNotFound(err) {
+			t.Fatal("abort did not finish finalizer cleanup")
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(foreign), foreign))
+		if foreign.UID != foreignUID || !foreign.DeletionTimestamp.IsZero() {
+			t.Fatal("abort affected unrelated Pod")
+		}
+	})
+	t.Run("abandoned-incomplete-intake-cleanup", func(t *testing.T) {
+		f, hc, token := fixture(t, "abandoned")
+		in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "order-abandoned"}
+		result := hook.Run(ctx, &incompleteClient{Client: hc}, in, token, time.Now())
+		if result.Code != hook.Retryable {
+			t.Fatal("partial intake not retryable")
+		}
+		w := &api.ClaudeWorkOrder{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(in.Pool, in.Order)}, w))
+		if w.Spec.Complete {
+			t.Fatal("fault completed intake")
+		}
+		var calls atomic.Int32
+		r := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(context.Context, *corev1.Pod) error { calls.Add(1); return nil }}
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		r.Now = func() time.Time { return w.Spec.ExpiresAt.Add(time.Minute) }
+		for i := 0; i < 2; i++ {
+			_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+			must(t, err)
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !w.Status.Terminal || w.Status.LaunchAttempted || w.Status.RetainUntil == nil {
+			t.Fatal("abandoned receipt not terminal and retained")
+		}
+		secret := &corev1.Secret{}
+		err = manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, secret)
+		if !apierrors.IsNotFound(err) {
+			t.Fatal("abandoned credential remained")
+		}
+		r = &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, Now: func() time.Time { return w.Status.RetainUntil.Add(time.Second) }}
+		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		if err = manager.Get(ctx, client.ObjectKeyFromObject(w), w); !apierrors.IsNotFound(err) {
+			t.Fatal("expired tombstone remained")
+		}
+		if calls.Load() != 0 {
+			t.Fatal("incomplete intake submitted Pod")
 		}
 	})
 	t.Run("crash-after-fence-and-late-pod", func(t *testing.T) {
@@ -532,6 +760,10 @@ func TestAPIRecovery(t *testing.T) {
 			t.Fatal("terminal credential remains")
 		}
 		intake(t, f, hc, token, "order-retention")
+		expiredReplay := hook.Run(ctx, hc, hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "order-retention"}, token, w.Spec.ExpiresAt.Add(10*time.Second))
+		if expiredReplay.Code != hook.Submitted {
+			t.Fatal("retained completed receipt did not acknowledge expired redelivery")
+		}
 		if manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, secret) == nil {
 			t.Fatal("replay recreated credential")
 		}
@@ -567,6 +799,95 @@ type lostResponseClient struct {
 	client.Client
 	kind string
 	lost bool
+}
+
+type mutatedReceiptClient struct {
+	client.Client
+	mutation string
+}
+
+type incompleteClient struct{ client.Client }
+
+func (c *incompleteClient) Update(ctx context.Context, o client.Object, opts ...client.UpdateOption) error {
+	if w, ok := o.(*api.ClaudeWorkOrder); ok && w.Spec.Complete {
+		return context.DeadlineExceeded
+	}
+	return c.Client.Update(ctx, o, opts...)
+}
+
+type faultReader struct {
+	client.Reader
+	mu    sync.Mutex
+	name  string
+	armed bool
+}
+
+func (r *faultReader) arm(name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.name = name
+	r.armed = true
+}
+func (r *faultReader) Get(ctx context.Context, key client.ObjectKey, o client.Object, opts ...client.GetOption) error {
+	r.mu.Lock()
+	fail := r.armed && key.Name == r.name
+	if fail {
+		r.armed = false
+	}
+	r.mu.Unlock()
+	if fail {
+		return apierrors.NewServiceUnavailable("synthetic sensitive backend detail")
+	}
+	return r.Reader.Get(ctx, key, o, opts...)
+}
+
+func (c *mutatedReceiptClient) Create(ctx context.Context, o client.Object, opts ...client.CreateOption) error {
+	if w, ok := o.(*api.ClaudeWorkOrder); ok {
+		if c.mutation == "fleet-uid" {
+			w.Spec.FleetUID = "synthetic-wrong-uid"
+			w.OwnerReferences[0].UID = "synthetic-wrong-uid"
+		}
+		if c.mutation == "expiry" {
+			w.Spec.ExpiresAt = metav1.NewTime(w.Spec.ExpiresAt.Add(5 * time.Minute))
+		}
+	}
+	return c.Client.Create(ctx, o, opts...)
+}
+
+type startupRaceClient struct {
+	client.Client
+	boundary string
+	reads    int
+	started  bool
+}
+
+func (c *startupRaceClient) Get(ctx context.Context, key client.ObjectKey, o client.Object, opts ...client.GetOption) error {
+	if err := c.Client.Get(ctx, key, o, opts...); err != nil {
+		return err
+	}
+	if p, ok := o.(*corev1.Pod); ok {
+		c.reads++
+		if c.boundary == "fresh-read" && c.reads == 2 {
+			p.Status.Phase = corev1.PodRunning
+			c.started = true
+			return c.Client.Status().Update(ctx, p)
+		}
+	}
+	return nil
+}
+func (c *startupRaceClient) Delete(ctx context.Context, o client.Object, opts ...client.DeleteOption) error {
+	if p, ok := o.(*corev1.Pod); ok && c.boundary == "delete-conflict" && !c.started {
+		fresh := &corev1.Pod{}
+		if err := c.Client.Get(ctx, client.ObjectKeyFromObject(p), fresh); err != nil {
+			return err
+		}
+		fresh.Status.Phase = corev1.PodRunning
+		if err := c.Client.Status().Update(ctx, fresh); err != nil {
+			return err
+		}
+		c.started = true
+	}
+	return c.Client.Delete(ctx, o, opts...)
 }
 
 func (c *lostResponseClient) Update(ctx context.Context, o client.Object, opts ...client.UpdateOption) error {
