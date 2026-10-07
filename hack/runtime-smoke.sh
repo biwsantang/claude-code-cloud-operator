@@ -10,6 +10,7 @@ checks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges --entrypoint /bin/sh \
   --mount "type=bind,src=$checks_dir/npm-security-smoke.cjs,dst=/checks/npm-security-smoke.cjs,readonly" \
+  --mount "type=bind,src=$checks_dir/runtime-python-smoke.py,dst=/checks/runtime-python-smoke.py,readonly" \
   --tmpfs /tmp:rw,nosuid,nodev,size=64m \
   --tmpfs /home/runner:rw,nosuid,nodev,size=64m,uid=1000,gid=1000 \
   "$image" -c '
@@ -20,11 +21,16 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
     test "$(node --version)" = v24.21.0
     test "$(npm --version)" = 11.21.0
+    test "$(npx --version)" = 11.21.0
+    test "$(yarn --version)" = 1.22.22
+    test "$(python3 --version)" = "Python 3.14.8"
     test "$(claude --version)" = "2.1.285 (Claude Code)"
     git --version
     python3 --version
     rg --version
     curl --version
+    ssh -V
+    python3 /checks/runtime-python-smoke.py
     node /checks/npm-security-smoke.cjs
     claude self-hosted-runner --help > /tmp/runner-help
     claude self-hosted-runner orchestrator --help > /tmp/orchestrator-help
@@ -44,5 +50,5 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     npm install --offline --ignore-scripts --no-audit --no-fund
     node -e "require(\"assert\").strictEqual(require(\"synthetic-dependency\"), 17)"
     test -f package-lock.json
-    printf "%s\n" "PASS: non-root read-only runtime, pinned CLI/tools, hook flags and offline npm"
+    printf "%s\n" "PASS: non-root read-only runtime, pinned CLI/tools, hook flags, offline npm and Python venv/pip"
   '

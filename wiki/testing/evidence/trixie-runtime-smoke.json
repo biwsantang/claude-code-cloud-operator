@@ -1,0 +1,763 @@
+{
+  "testedAt": "2026-10-07T17:27:27+07:00",
+  "sourceBaseCommit": "daf0efb9cb4a4874b17e04ae9af3f3f9e4286f4e",
+  "sourceFilesSHA256": {
+    "images/runtime/Dockerfile": "0d1a4f0c1bc92e69e360ff5616ac0529a4487dcbc846342ba3d3e87accd0232e",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "images/runtime/install-npm-overrides.py": "67512f5c8370da38fd3db906dc62a3e7ad6646a74a85d49610c6395939aea792",
+    "hack/runtime-smoke.sh": "aadd370b03b6fa14fb65cd4909324dd4884e01b77f143dc64ff953bdedcf51d8",
+    "hack/runtime-python-smoke.py": "6923011778cb7b371c35c333266d94ed863b17b11ce58711d969d25dd3314f32",
+    "hack/npm-security-smoke.cjs": "b8ee71a205748c9dfa86683550fa1ec956956a33f059057712107c6428c49bf1",
+    ".github/workflows/test.yml": "013e4eaefc1fb8e868618684772b4ebf17141c7e95c4a8dfb2d85992fb16ea3f"
+  },
+  "baseImages": [
+    {
+      "image": "node-24-trixie-slim",
+      "indexDigest": "sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66",
+      "platforms": [
+        {
+          "platform": {
+            "architecture": "amd64",
+            "os": "linux"
+          },
+          "digest": "sha256:c83040f7e24bacea68e58a0b96a484ba430bf24abb2973eab7ba4701144b7b63",
+          "recipeRevision": "93a7bafc324a85ac1ee461604cff87cffacb6d7a"
+        },
+        {
+          "platform": {
+            "architecture": "arm64",
+            "os": "linux",
+            "variant": "v8"
+          },
+          "digest": "sha256:f78037e2794cbe13ccef68c8a3cdca5c263c27ff6d747617cb87206daf4d12a0",
+          "recipeRevision": "93a7bafc324a85ac1ee461604cff87cffacb6d7a"
+        }
+      ]
+    },
+    {
+      "image": "python-3.14.8-slim-trixie",
+      "indexDigest": "sha256:f85c5697265c178cc6887276c55fe16cf3d14ca35c3df6a5eab3b360534a55d2",
+      "platforms": [
+        {
+          "platform": {
+            "architecture": "amd64",
+            "os": "linux"
+          },
+          "digest": "sha256:cfe2e24a75302a15934d37c2d86412893c0aa934dc3a97cbb439d04c01890ca9",
+          "recipeRevision": "7cc547b3ff8d45d540cd23144227af126a79d60c"
+        },
+        {
+          "platform": {
+            "architecture": "arm64",
+            "os": "linux",
+            "variant": "v8"
+          },
+          "digest": "sha256:7f47c8ffd4e70e88f7326b68e7df95109597ef66023a1052b7d1ec18390d2604",
+          "recipeRevision": "7cc547b3ff8d45d540cd23144227af126a79d60c"
+        }
+      ]
+    }
+  ],
+  "debianSnapshot": "20261007T000000Z",
+  "grypeVersion": "0.120.1",
+  "scope": "squashed",
+  "userIgnoreRules": [],
+  "effectiveDefaultKernelHeaderRules": [
+    {
+      "name": "kernel-headers",
+      "version": "",
+      "language": "",
+      "type": "rpm",
+      "location": "",
+      "upstream-name": "kernel"
+    },
+    {
+      "name": "linux(-.*)?-headers-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    },
+    {
+      "name": "linux-libc-dev",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux"
+    },
+    {
+      "name": "linux-kbuild-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    }
+  ],
+  "onlyFixed": false,
+  "onlyNotFixed": false,
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "results": [
+    {
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:2f7aac596678c334d696340382fb33c4501194c2167f4a5c049267ee50a829d4",
+      "imageConfigID": "sha256:8c43a84e9893bcb2534b6fa2886b76a3b2e95bf239405aad6a4408f441b7c303",
+      "scannerManifestDigest": "sha256:5d0a358443d4e4f46e588cd5124c2622d84502a6c71e3cfe538ff79e8ddeee0f",
+      "scannerManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "buildManifestDigest": "sha256:aa5b9439af10a5e26604dbdf0adcc3eee3d3b011e9cc8b00eabb9c6209ec02f6",
+      "rawReportSHA256": "52f6bc167531ed3a68e79003aff22a86624ba14868a0a37c3a16754d0eb3dd4c",
+      "buildLogSHA256": "93da1cd27a3111dc2f9be30eee7dff0bd398aa8a26e2480109982c5381fd0457",
+      "scanTimestamp": "2026-10-07T17:23:40.88147+07:00",
+      "matchesBySeverity": {
+        "Negligible": 103,
+        "Critical": 25,
+        "High": 100,
+        "Medium": 74,
+        "Low": 13,
+        "Unknown": 1
+      },
+      "ignoredMatchCount": 0,
+      "criticalGateExitCode": 2,
+      "criticalGatePassed": false,
+      "criticalFindings": [
+        {
+          "id": "CVE-2026-19931",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-19931",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-19931",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-60002",
+          "package": "openssh-client",
+          "version": "1:10.0p1-7+deb13u4",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-60002"
+        }
+      ]
+    },
+    {
+      "platform": "linux/amd64",
+      "localImageIndexID": "sha256:153dd83fb979c868d156df20583252ce51e7c12b1ac37f03169c1684822c35c6",
+      "imageConfigID": "sha256:c3704b7349941c619c51cd829d77ed5527625e0cd9bb00a4eb9b59d516bc603f",
+      "scannerManifestDigest": "sha256:7595dc4197b5de757d4f7813070f98fd8e80d35f6db80a0de1e34004e75c6b91",
+      "scannerManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "buildManifestDigest": "sha256:fb38bb18c5c7023eb74de277f0d0e60242f2c823b45733bc6e4b9fe66d18c3ad",
+      "rawReportSHA256": "043a142fc5eb7d5217f520d2786a953f1185c535d11e32312f782904a3317d3f",
+      "buildLogSHA256": "31972f6baf2d2932aa715b9b5f9cd17138b2853cfd291a21d8ea327558700f41",
+      "scanTimestamp": "2026-10-07T17:27:26.684604+07:00",
+      "matchesBySeverity": {
+        "Negligible": 103,
+        "Critical": 25,
+        "High": 100,
+        "Medium": 74,
+        "Low": 13,
+        "Unknown": 1
+      },
+      "ignoredMatchCount": 0,
+      "criticalGateExitCode": 2,
+      "criticalGatePassed": false,
+      "criticalFindings": [
+        {
+          "id": "CVE-2026-19931",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-19931",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-19931",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-11856",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-8924",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-10536",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-9079",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-18924",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8927",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "curl",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "libcurl3t64-gnutls",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-8926",
+          "package": "libcurl4t64",
+          "version": "8.14.1-2+deb13u5",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926"
+        },
+        {
+          "id": "CVE-2026-60002",
+          "package": "openssh-client",
+          "version": "1:10.0p1-7+deb13u4",
+          "fix": {
+            "versions": [],
+            "state": "wont-fix"
+          },
+          "source": "https://security-tracker.debian.org/tracker/CVE-2026-60002"
+        }
+      ]
+    }
+  ],
+  "baseline": {
+    "evidence": "npm-overrides-smoke.json",
+    "rawReportSHA256": "2d620fc657f4c08a5c406f4d31250d83d1ee1c61062a7ccc1fbcbcdf3b6d7a4c",
+    "criticalMatchCount": 27,
+    "removedCriticalAdvisoryIDs": [
+      "CVE-2025-7458",
+      "CVE-2026-19445",
+      "CVE-2026-5450"
+    ],
+    "addedCriticalAdvisoryIDs": [
+      "CVE-2026-8926",
+      "CVE-2026-9079"
+    ],
+    "removedCriticalPackageMatchCount": 8,
+    "addedCriticalPackageMatchCount": 6
+  },
+  "arm64NativeFullSmokePassed": true,
+  "arm64FullSmokeLogSHA256": "15d8485c78b7392ff553e4136828cb7c9c648048697f7c34f9728b98601ebd29",
+  "arm64SBOM": {
+    "syftVersion": "1.54.1",
+    "rawReportSHA256": "f5d61cf35c754237476f9b5ef19ad773073cb393b0eda864e728afb84ee387ad",
+    "artifactCount": 281,
+    "selectedPackages": [
+      {
+        "name": "curl",
+        "version": "8.14.1-2+deb13u5",
+        "type": "deb",
+        "purl": "pkg:deb/debian/curl@8.14.1-2%2Bdeb13u5?arch=arm64&distro=debian-13.7"
+      },
+      {
+        "name": "git",
+        "version": "1:2.47.3-0+deb13u1",
+        "type": "deb",
+        "purl": "pkg:deb/debian/git@1%3A2.47.3-0%2Bdeb13u1?arch=arm64&distro=debian-13.7"
+      },
+      {
+        "name": "libc-bin",
+        "version": "2.41-12+deb13u4",
+        "type": "deb",
+        "purl": "pkg:deb/debian/libc-bin@2.41-12%2Bdeb13u4?arch=arm64&distro=debian-13.7&upstream=glibc"
+      },
+      {
+        "name": "libc6",
+        "version": "2.41-12+deb13u4",
+        "type": "deb",
+        "purl": "pkg:deb/debian/libc6@2.41-12%2Bdeb13u4?arch=arm64&distro=debian-13.7&upstream=glibc"
+      },
+      {
+        "name": "libsqlite3-0",
+        "version": "3.46.1-7+deb13u2",
+        "type": "deb",
+        "purl": "pkg:deb/debian/libsqlite3-0@3.46.1-7%2Bdeb13u2?arch=arm64&distro=debian-13.7&upstream=sqlite3"
+      },
+      {
+        "name": "node",
+        "version": "24.21.0",
+        "type": "binary",
+        "purl": "pkg:generic/node@24.21.0"
+      },
+      {
+        "name": "npm",
+        "version": "11.21.0",
+        "type": "npm",
+        "purl": "pkg:npm/npm@11.21.0"
+      },
+      {
+        "name": "openssh-client",
+        "version": "1:10.0p1-7+deb13u4",
+        "type": "deb",
+        "purl": "pkg:deb/debian/openssh-client@1%3A10.0p1-7%2Bdeb13u4?arch=arm64&distro=debian-13.7&upstream=openssh"
+      },
+      {
+        "name": "pip",
+        "version": "26.2.1",
+        "type": "python",
+        "purl": "pkg:pypi/pip@26.2.1"
+      },
+      {
+        "name": "python",
+        "version": "3.14.8",
+        "type": "binary",
+        "purl": "pkg:generic/python@3.14.8"
+      },
+      {
+        "name": "yarn",
+        "version": "1.22.22",
+        "type": "npm",
+        "purl": "pkg:npm/yarn@1.22.22"
+      }
+    ]
+  },
+  "amd64NativeFullSmokePassed": false,
+  "amd64HardwareCIPending": true,
+  "localVerification": {
+    "makeVerify": true,
+    "makeTestAPI": "1.33.0",
+    "makeVerifyLogSHA256": "c3faa287c75ac609d52d4d9d80708e2a2ade28735911fe6320c189cccd879080",
+    "integrationLogSHA256": "0c70449b1402dd9426ee7a6e294258b58a928eb81ab8f1034474b87f0da52390",
+    "pythonTestCount": 14,
+    "actionlint": true
+  },
+  "releaseApproved": false,
+  "vendorAcceptancePassed": false,
+  "targetNodeCPUAcceptance": false,
+  "published": false
+}

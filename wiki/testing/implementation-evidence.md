@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:02:49+07:00"
+  at: "2026-10-07T17:28:00+07:00"
 ---
 
 # Implementation evidence
@@ -269,6 +269,23 @@ previously fixable bundled-dependency High matches without suppression; remainin
 and 126 High matches. The Critical release gate still fails. ARM64 native SDK and actual advisory probes pass;
 the old bundle reproduces the reported failures. [Matching AMD64 hardware CI](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37604394799) passes for this changed image, including actual advisory and offline SDK probes.
 Task 5.1 is restored after that execution check; no signing key is generated or release published.
+
+## Debian 13 and Python runtime revision
+
+The [runtime review](runtime-vulnerability-review.md) and [new candidate evidence](evidence/trixie-runtime-smoke.json)
+record digest-pinned official Python 3.14.8/Node 24.21.0 images on one Debian 13 suite with a fixed apt snapshot.
+Node's SDK/npm/npx/Yarn and Python's runtime/venv/pip are retained. The named UID/GID 1000 runner account
+supports SSH user lookup. Python changes from 3.11 to 3.14, so application dependency compatibility remains
+an acceptance concern. Native ARM64 restricted smoke passes the CLI/npm advisory checks and offline SDK
+operations plus CA/SSL, compression, ctypes, SQLite and virtual-environment wheel install/import.
+
+Both final local architecture scans report 25 Critical, 100 High, 74 Medium, 13 Low, 103 Negligible and
+one Unknown match. Eight prior Python/glibc/SQLite Critical package matches disappear; six curl matches
+are added for two newer-version advisory ranges. No user ignore rules or ignored matches are present;
+the effective Grype configuration retains its default kernel-header exclusions. The Critical gate still fails.
+A separately hashed Syft catalogue identifies the upstream Python binary and actual package versions.
+`make verify` and the 1.33.0 API suite pass. Matching native AMD64 CI is pending; task 5.1 is reopened
+for this revision. No source tests or smaller scanner count substitute for that execution check or release acceptance.
 
 ## External gates
 
