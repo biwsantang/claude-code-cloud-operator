@@ -6,7 +6,7 @@ tags: [claude-code, runtime, security, curl]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:53:19+07:00"
+  at: "2026-10-07T22:00:09+07:00"
 sources:
   - resource: repo://wiki/testing/evidence/curl-runtime-smoke.json
   - resource: repo://wiki/testing/evidence/curl-boundary-regression.json
@@ -25,9 +25,13 @@ sources:
   - resource: https://curl.se/libcurl/c/CURLOPT_USERNAME.html
 ---
 
-# Eight advisories, twenty-four scanner matches
+# Historical custom curl candidate: eight advisories, twenty-four matches
 
-The current native ARM64 and AMD64 runtime scans each retain 24 Critical matches: eight advisory IDs
+The custom curl build described here has been retired. See the [current runtime review](runtime-vulnerability-review.md)
+for the maintained Ubuntu base and its failing netrc isolation probe. Existing source/image/report hashes
+and the assessment below describe the historical 8.22.0 candidate; they grant no approval to the replacement.
+
+The historical native ARM64 and AMD64 runtime scans each retain 24 Critical matches: eight advisory IDs
 against the three installed private curl packages. All are reported through Debian advisory records
 with `wont-fix` state and no fixed-version bounds. There are no user ignore rules or ignored matches.
 The [scan/source evidence](evidence/curl-runtime-smoke.json) binds these observations to exact images,

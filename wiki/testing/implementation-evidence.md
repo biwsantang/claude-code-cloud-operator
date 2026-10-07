@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T19:44:02+07:00"
+  at: "2026-10-07T22:00:09+07:00"
 ---
 
 # Implementation evidence
@@ -369,3 +369,21 @@ The manager's multi-platform OCI export also contains an SPDX SBOM and SLSA prov
 architecture using the release build flags. Registry publishing, tagged-release attachment and real
 Claude/network acceptance have not been executed by this local verification. Remote source/image CI
 is checked separately on the pushed revision.
+
+## Maintained-base runtime revision
+
+The optional runtime now derives from the digest-pinned Microsoft Ubuntu 24.04 devcontainer base and
+official Node 24 SDK. Python is Ubuntu 3.12; test downstream dependencies for the change from 3.14.
+Custom curl/OpenSSH builders, private ABI packages, npm dependency overrides and their installer-only
+tests are removed. Functional behavior checks and security probes remain; CI collects inventory even
+when a probe fails. Existing custom-build JSON evidence above is historical.
+
+Native ARM64 build and restricted functional smoke pass, including Python venv/offline pip, SSH crypto
+and agent cleanup, Git HTTPS clone/commit/push, offline npm and Claude runner/orchestrator flags.
+The renamed UID 1000 runner has no supplementary groups or passwordless sudo; both Claude update paths
+are disabled. `make verify`, real Kubernetes 1.33 API tests, actionlint and shell syntax checks pass.
+Local QEMU AMD64 build fails in Python package installation; native AMD64 checks remain pending CI.
+
+Security smoke correctly fails netrc credential isolation in both installed libcurl variants and the
+upstream npm brace recursion regression. The [runtime review](runtime-vulnerability-review.md) reports
+scan results and scanner defaults separately. No deployment, publication or vendor acceptance is inferred.

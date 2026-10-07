@@ -2,7 +2,9 @@
 set -eu
 image=${1:?provide the private runtime image}
 platform=${2:?provide linux/amd64 or linux/arm64}
+mode=${3:-functional}
 case "$platform" in linux/amd64|linux/arm64) ;; *) exit 2 ;; esac
+case "$mode" in functional|security) ;; *) exit 2 ;; esac
 test "$(docker image inspect --format '{{.Config.User}}' "$image")" = '1000:1000'
 checks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
@@ -19,13 +21,22 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     set -eu
     test "$(id -u)" = 1000
     test "$DISABLE_AUTOUPDATER" = 1
+    test "$DISABLE_UPDATES" = 1
     test "$SELF_HOSTED_RUNNER_HOST_CONFIG_DIR" = /etc/claude
     test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
     test "$(node --version)" = v24.21.0
     test "$(npm --version)" = 11.21.0
     test "$(npx --version)" = 11.21.0
     test "$(yarn --version)" = 1.22.22
-    test "$(python3 --version)" = "Python 3.14.8"
+    test "$(getent passwd 1000 | cut -d: -f1)" = runner
+    test "$(getent passwd 1000 | cut -d: -f6)" = /home/runner
+    if sudo -n true 2>/dev/null; then exit 1; fi
+    if [ "$1" = security ]; then
+      result=0
+      python3 /checks/runtime-curl-smoke.py --security-only || result=1
+      node /checks/npm-security-smoke.cjs || result=1
+      exit "$result"
+    fi
     test "$(claude --version)" = "2.1.285 (Claude Code)"
     git --version
     python3 --version
@@ -34,8 +45,7 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     ssh -V
     python3 /checks/runtime-python-smoke.py
     python3 /checks/runtime-ssh-smoke.py
-    python3 /checks/runtime-curl-smoke.py
-    node /checks/npm-security-smoke.cjs
+    python3 /checks/runtime-curl-smoke.py --sdk-only
     claude self-hosted-runner --help > /tmp/runner-help
     claude self-hosted-runner orchestrator --help > /tmp/orchestrator-help
     for flag in --capacity --confine-repo-settings --use-anthropic-git-proxy --configure-git; do
@@ -55,4 +65,4 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     node -e "require(\"assert\").strictEqual(require(\"synthetic-dependency\"), 17)"
     test -f package-lock.json
     printf "%s\n" "PASS: non-root read-only runtime, pinned CLI/tools, hook flags, offline npm and Python venv/pip"
-  '
+  ' runtime-smoke "$mode"

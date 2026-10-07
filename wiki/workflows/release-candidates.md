@@ -6,7 +6,7 @@ tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T19:44:02+07:00"
+  at: "2026-10-07T22:00:09+07:00"
 sources:
   - resource: repo://.github/workflows/release.yml
   - resource: repo://.github/workflows/test.yml
@@ -18,7 +18,7 @@ sources:
 # Operator images and chart
 
 The release unit is the manager image, spawn-hook image, chart and raw installation manifests. Claude's
-native binary and the optional custom runtime are excluded. The former offline review-bundle producer,
+native binary and the optional development runtime are excluded. The former offline review-bundle producer,
 custom inventory verifier and signing exercise have been removed; their evidence remains historical.
 No release has been published. The new workflow must pass CI and its first tagged execution before claiming
 publication evidence. Real vendor acceptance remains required before production use of a Fleet.
@@ -68,9 +68,9 @@ and private-repository feature availability first. No runtime process should own
 ## Runtime and installation
 
 Administrators provide a separately accepted runtime image for both orchestrator and session runners.
-The optional [runtime candidate](../../images/runtime/README.md) has unresolved Critical findings and is
-not release-approved. Its custom curl/OpenSSH/npm maintenance stays isolated and can be replaced by a
-compatible accepted image without rebuilding the operator.
+The optional [runtime candidate](../../images/runtime/README.md) uses a maintained Ubuntu devcontainer base and distro curl/OpenSSH. It remains
+unapproved because security regression probes fail; a Critical-only scan pass does not approve it.
+A compatible accepted image can be supplied without rebuilding the operator.
 
 The environment credential is an existing namespace Secret. cert-manager handles admission TLS. New
 Fleets start suspended; [network approval and drain](../operations/install-and-drain.md) remain runtime

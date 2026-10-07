@@ -19,7 +19,7 @@ import zlib
 
 
 def main():
-    assert sys.version_info[:3] == (3, 14, 8), sys.version
+    assert sys.version_info[:2] == (3, 12), sys.version
     assert ssl.create_default_context().cert_store_stats()["x509_ca"] > 0
     assert ctypes.CDLL(None).getpid() > 0
     data = b"synthetic-runtime-sdk" * 100
@@ -38,7 +38,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="python-sdk-") as directory:
         root = Path(directory)
         environment = root / "venv"
-        # Match `python -m venv` on POSIX: keep the executable in /usr/local.
+        # Match `python -m venv` on POSIX: keep the executable on the read-only image.
         # Docker tmpfs can be noexec; writable code/package data need no copied binary.
         venv.EnvBuilder(with_pip=True, symlinks=True).create(environment)
         wheel = root / "synthetic_runtime_sdk-1.0.0-py3-none-any.whl"

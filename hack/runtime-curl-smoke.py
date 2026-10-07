@@ -6,7 +6,6 @@ import base64
 import ctypes
 import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import json
 import os
 from pathlib import Path
 import re
@@ -97,7 +96,7 @@ class GitFixture(BaseHTTPRequestHandler):
                    CONTENT_TYPE=self.headers.get("Content-Type", ""), CONTENT_LENGTH=str(length),
                    SERVER_PROTOCOL=self.request_version, REMOTE_USER="synthetic",
                    HTTP_GIT_PROTOCOL=self.headers.get("Git-Protocol", ""))
-        result = run(["/usr/lib/git-core/git-http-backend"], env=env, input=self.rfile.read(length)).stdout
+        result = run([self.server.git_backend], env=env, input=self.rfile.read(length)).stdout
         header, separator, body = result.partition(b"\r\n\r\n")
         if not separator:
             header, separator, body = result.partition(b"\n\n")
@@ -224,7 +223,7 @@ def credential_probes(paths, root):
         stop(fixture, thread)
     if failures:
         raise AssertionError("; ".join(failures))
-    print("PASS: both libcurl variants clear proxy credentials and isolate netrc users")
+    print("PASS: installed libcurl variants clear proxy credentials and isolate netrc users")
 
 
 def digest_probes(paths):
@@ -339,8 +338,8 @@ def boundary_probes(paths, root):
     failures = digest_probes(paths) + cookie_and_cli_probes(paths, root)
     if failures:
         raise AssertionError("; ".join(failures))
-    print("PASS: validated Digest controls and origin/environment-proxy isolation in both libraries")
-    print("PASS: PSL trailing-dot cookie rejection in CLI/both libraries and CLI netrc user isolation")
+    print("PASS: validated Digest controls and origin/environment-proxy isolation in installed libraries")
+    print("PASS: PSL trailing-dot cookie rejection in CLI/installed libraries and CLI netrc user isolation")
 
 
 def https_git(paths, root):
@@ -380,6 +379,7 @@ def https_git(paths, root):
     run(["git", "--git-dir=" + str(bare), "symbolic-ref", "HEAD", "refs/heads/main"])
     fixture, thread = server(GitFixture, context)
     fixture.project_root = project
+    fixture.git_backend = str(Path(run(["git", "--exec-path"]).stdout.decode().strip()) / "git-http-backend")
     try:
         env = dict(os.environ, NO_PROXY="*", no_proxy="*")
         tls = ["-c", "http.sslCAInfo=" + str(cert)]
@@ -392,38 +392,30 @@ def https_git(paths, root):
         assert run(["git", "--git-dir=" + str(bare), "rev-parse", "main"]).stdout == run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout
     finally:
         stop(fixture, thread)
-    print("PASS: CLI/both libcurl CA validation and Git HTTPS clone/commit/push")
+    print("PASS: CLI/installed libcurl CA validation and Git HTTPS clone/commit/push")
 
 
 def main():
     multiarch = {"aarch64": "aarch64-linux-gnu", "x86_64": "x86_64-linux-gnu"}[os.uname().machine]
-    paths = {"openssl": Path(f"/usr/lib/{multiarch}/libcurl.so.4"), "gnutls": Path(f"/usr/lib/{multiarch}/libcurl-gnutls.so.4")}
+    paths = {name: path for name, path in {
+        "openssl": Path(f"/usr/lib/{multiarch}/libcurl.so.4"),
+        "gnutls": Path(f"/usr/lib/{multiarch}/libcurl-gnutls.so.4"),
+    }.items() if path.exists()}
+    assert paths, "no installed libcurl transport"
     security_only = sys.argv[1:] == ["--security-only"]
     boundary_only = sys.argv[1:] == ["--boundary-only"]
-    assert not sys.argv[1:] or security_only or boundary_only
+    sdk_only = sys.argv[1:] == ["--sdk-only"]
+    assert not sys.argv[1:] or security_only or boundary_only or sdk_only
     if not security_only and not boundary_only:
-        record = json.loads(Path("/usr/local/share/claude-runtime/curl-build.json").read_text())
-        assert record["version"] == "8.22.0" and record["releaseSignerFingerprint"] == "27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2"
-        assert hashlib.sha256(Path("/usr/bin/curl").read_bytes()).hexdigest() == record["cliSHA256"]
-        for backend, variant in record["variants"].items():
-            assert hashlib.sha256(Path(variant["libraryPath"]).read_bytes()).hexdigest() == variant["librarySHA256"]
-            assert run(["dpkg-query", "-W", "-f=${Version}", {"openssl": "libcurl4t64", "gnutls": "libcurl3t64-gnutls"}[backend]]).stdout.decode() == record["packageVersion"]
-            client = Curl(paths[backend])
-            try:
-                assert client.version.startswith("libcurl/8.22.0 ")
-            finally:
-                client.close()
+        assert run(["dpkg-query", "-W", "-f=${db:Status-Abbrev}", "curl"]).stdout[:2] == b"ii"
         version = run(["curl", "--version"]).stdout.decode()
-        assert "GnuTLS/" in version and "HTTP2" in version and "HTTP3" in version
-        for feature in ["GSS-API", "Kerberos", "SPNEGO", "NTLM", "HTTPS-proxy"]:
-            assert feature in version, feature
-        for protocol in ["http", "https", "scp", "sftp", "smb", "smbs", "ldap", "ldaps"]:
-            assert protocol in version.split("Protocols:", 1)[1].splitlines()[0].split(), protocol
+        assert "HTTPS-proxy" in version
+        assert "https" in version.split("Protocols:", 1)[1].splitlines()[0].split()
     with tempfile.TemporaryDirectory(prefix="curl-sdk-") as directory:
         root = Path(directory)
-        if not boundary_only:
+        if not boundary_only and not sdk_only:
             credential_probes(paths, root)
-        if not security_only:
+        if not sdk_only:
             boundary_probes(paths, root)
         if not security_only and not boundary_only:
             https_git(paths, root)

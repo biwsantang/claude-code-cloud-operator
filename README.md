@@ -43,7 +43,8 @@ with SBOM and BuildKit provenance, and a chart plus digest-pinned raw manifests 
 No release has been published or this publishing path exercised yet. See the [release guide](wiki/workflows/release-candidates.md).
 
 The Claude runtime is a separate image supplied by the administrator. The
-[private runtime candidate](images/runtime/README.md) is optional development work, tested by a separate
+[private runtime candidate](images/runtime/README.md) uses a maintained Ubuntu devcontainer base with Node/Python
+and distro-packaged curl/OpenSSH. It is tested by a separate
 path-filtered workflow. Its unresolved vulnerabilities block acceptance of that runtime; they do not
 become findings in the manager/hook images. Neither workflow publishes Anthropic binaries.
 
