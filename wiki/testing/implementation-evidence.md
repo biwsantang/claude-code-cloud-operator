@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:15:26+07:00"
+  at: "2026-10-07T14:17:12+07:00"
 ---
 
 # Implementation evidence
@@ -140,6 +140,18 @@ permanently rejected. Lost completion responses can also be acknowledged after c
 Envtest does not execute these Pods or run a scheduler/kubelet/CNI. These are bounded API concurrency and
 recovery checks, not production throughput, startup p99, node loss or scheduling-capacity acceptance.
 Task 6.4 remains pending for those criteria.
+
+The hook was rebuilt from an archived, clean source commit `8ff44dc70cae413761d911c6bac0ca76b9a044b9`,
+including the readiness and acknowledgement fixes. Both private images pass `hack/hook-smoke.sh` under
+the configured read-only/non-root/32Mi volume posture; AMD64 executes through QEMU on the ARM64 host.
+
+| Platform | OCI index digest | Architecture manifest digest |
+| --- | --- | --- |
+| linux/amd64 | `sha256:97c12e3a80fb2aa832399a4156303485e2ea3dae0046aca2b91d77a916479c19` | `sha256:aa030e771ebdb97121b3c758ba83b08bebc2d5030e994747226bb205df5b8be8` |
+| linux/arm64 | `sha256:a66e4fc8bec59077b5f5f697c7946125fbc212a2b9a2d1c994f9dfdf8e19aa47` | `sha256:9bf2b8f2cdef3ef73cb4f0f8fe2ede6a02f8f299f9f9091f3625915361ecd950` |
+
+Docker image inspection matches these index digests. They are local private builds; they do not replace
+the source-specific clock-fix manager installation evidence or constitute published/signed artifacts.
 
 ## External gates
 
