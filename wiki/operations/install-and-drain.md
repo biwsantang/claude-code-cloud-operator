@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T12:24:00+07:00"
+  at: "2026-10-07T13:14:43+07:00"
 ---
 
 # Installation and lifecycle operations
@@ -33,6 +33,12 @@ Do not associate session identities with cloud roles. Keep image/config/Fleet/re
    test time and expiry (at most 24 hours). Untrusted sessions and hooks must have no report-write permission.
 8. Complete dedicated vendor acceptance. Activate only after these gates pass. Missing/stale reports or changed
    policy stop polling/new launches; active execution retains its existing policy.
+
+Synchronize the hook and manager nodes' clocks and monitor drift. The adapter translates the native poll's
+HTTP Date into this cluster clock domain and freezes that offset per receipt. Offsets beyond one hour cause
+a retryable `ClockSkewOutsideBudget` failure; repair the clock before retrying. A missing Date on fresh intake
+uses local time; a partial retry keeps the original offset. Signed expiry is retained unchanged and cleanup
+never shortens its floor because of translation. This does not synchronize clocks across nodes.
 
 Avoid mutable configuration names. Publish immutable ConfigMaps under new names; retain referenced versions
 until their orders finish. Old policy revisions remain while the Fleet exists to preserve active boundaries.

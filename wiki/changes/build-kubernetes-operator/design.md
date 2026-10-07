@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T13:14:43+07:00"
 sources:
   - resource: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/"
   - resource: "https://book.kubebuilder.io/reference/good-practices"
@@ -37,11 +37,11 @@ Group: `runners.biwsantang.github.io/v1alpha1`. Both Kinds are namespaced.
 | Resource | Spec inputs | Controller-owned observations |
 | --- | --- | --- |
 | `ClaudeRunnerFleet` | External `environmentID`; same-namespace `environmentSecretRef`; digest-pinned `orchestratorImage` and `runnerImage`; orchestrator replicas; scheduling fields; resource requests/memory limit; hook timeout, spawn lease; host config reference; proxy/network configuration; activation and retention policy. | `observedGeneration`; `Configured`, `CredentialsReady`, `NetworkValidated`, `Connected`, `Ready`, `Suspended`, `Degraded`; aggregate infrastructure counts. |
-| `ClaudeWorkOrder` | Fleet name/UID; order ID; pool ID; deterministic credential Secret reference; immutable token digest, expiry and operator policy snapshot; receipt state initially incomplete. No JWT or user identity. | `Accepted`, `LaunchAttempted`, `PodObserved`, `Terminal`, `SubmissionUncertain`; Pod name/UID; infrastructure outcome, timestamps, retention deadline and sanitized reason. |
+| `ClaudeWorkOrder` | Fleet name/UID; order ID; pool ID; deterministic credential Secret reference; immutable token digest, signed expiry, clock offset and operator policy snapshot; receipt state initially incomplete. No JWT or user identity. | `Accepted`, `LaunchAttempted`, `PodObserved`, `Terminal`, `SubmissionUncertain`; Pod name/UID; infrastructure outcome, timestamps, retention deadline and sanitized reason. |
 
 The hook may create receipts and perform the one incomplete-to-complete intake transition only.
 Admission validates this exception; fields freeze once accepted. Freeze Fleet UID, pool/order identity,
-credential digest, retention inputs and policy snapshot. Only the controller writes status.
+credential digest, signed expiry/clock offset, retention inputs and policy snapshot. Only the controller writes status.
 Never expose arbitrary PodSpec/command/hostPath or a credential value through either API.
 Validate node selectors, tolerations and resource budgets through typed fields. Require requests plus
 memory limit, no CPU limit by default. A concrete CR sample follows schema generation, not guessed YAML now.
@@ -56,7 +56,7 @@ One namespace per trust boundary is recommended. Cross-namespace references and 
 
 ## 3. Durable hook receipt
 
-1. Validate required inputs and expiry; use supplied server time where available for expiry bookkeeping.
+1. Validate required inputs and expiry against the native poll HTTP Date when supplied, otherwise local time. Preserve the signed expiry and freeze local-minus-server `clockOffsetSeconds` (bounded to one hour) in the first receipt. Admission and launch use signed expiry plus this offset; completion verifies the credential against the same time basis. An incomplete retry with no Date uses its stored offset. Redelivery cannot rewrite it. Malformed metadata is permanent; an out-of-budget clock is retryable so the operator can recover after clock repair.
 2. Derive resource names from a hash of pool ID plus order ID. Session ID is never the deduplication identity.
 3. Create an incomplete WorkOrder CR to obtain its UID. Resolve AlreadyExists only after immutable identity checks.
 4. Create an immutable Secret with that CR UID as its owner; compare any collision's owner UID and credential digest.
@@ -116,7 +116,7 @@ Use a pinned native runner with one-session capacity, zero reuse grace, operator
 and Anthropic git proxy. Validate architecture and toolchain support during image tests.
 
 Suspend gates hook acceptance and unlaunched receipts; existing Pods continue. Unlaunched receipts expire without submission.
-Retention keeps a sanitized tombstone through credential expiry plus clock margin and a post-terminal diagnostics floor.
+Retention keeps a sanitized tombstone through the later of signed expiry and clock-corrected expiry plus clock margin, and a post-terminal diagnostics floor. Both unobserved in-flight credentials and pending cleanup use this conservative floor. Running Pods remain outside expiry cleanup. Hook and manager nodes require a synchronized, stable cluster clock; the offset corrects vendor-to-cluster skew and does not synchronize drifting nodes. A native JWT signature/registration remains the vendor's responsibility.
 Set a configured maximum retention too; excessive/malformed expiry is rejected at intake.
 Remove bearer Secrets once no Pod can still need them. Delete never-started expired Pods conservatively with UID
 preconditions; concurrent startup can still race cleanup, which tests and operations must acknowledge.

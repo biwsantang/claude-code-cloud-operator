@@ -31,6 +31,30 @@ type Result struct {
 }
 
 func fail(reason string, code int) Result { return Result{Code: code, Reason: reason} }
+
+var ErrClockSkew = errors.New("server clock outside accepted skew")
+
+func clockOffset(serverTime string, now time.Time) (int64, error) {
+	if serverTime == "" {
+		return 0, nil
+	}
+	server, err := http.ParseTime(serverTime)
+	if err != nil {
+		return 0, errors.New("malformed server time")
+	}
+	offset := now.Unix() - server.Unix()
+	if offset < -3600 || offset > 3600 {
+		return 0, ErrClockSkew
+	}
+	return offset, nil
+}
+
+func invalidCredential(err error) Result {
+	if errors.Is(err, ErrClockSkew) {
+		return fail("ClockSkewOutsideBudget", Retryable)
+	}
+	return fail("InvalidCredential", Permanent)
+}
 func Classify(err error) int {
 	if err == nil {
 		return Submitted
@@ -69,12 +93,12 @@ func Expiry(token []byte, serverTime string, now time.Time, maxLifetime int64) (
 		if err != nil {
 			return time.Time{}, errors.New("malformed server time")
 		}
-		if t.Before(now.Add(-time.Hour)) || t.After(now.Add(time.Hour)) {
-			return time.Time{}, errors.New("server clock outside accepted skew")
+		if _, err := clockOffset(serverTime, now); err != nil {
+			return time.Time{}, err
 		}
 		reference = t
 	}
-	if !expiry.After(reference) || !expiry.After(now.Add(-time.Minute)) || expiry.After(now.Add(time.Duration(maxLifetime)*time.Second)) {
+	if !expiry.After(reference) || expiry.After(reference.Add(time.Duration(maxLifetime)*time.Second)) {
 		return time.Time{}, errors.New("credential lifetime outside bounds")
 	}
 	return expiry, nil
@@ -108,9 +132,14 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 		if w.Spec.Complete {
 			return Result{Code: Submitted, Reason: "Redelivered", Name: name}
 		}
-		expiry, err := Expiry(token, in.ServerTime, now, f.Spec.Execution.MaxTokenLifetimeSeconds)
+		// A retry whose gateway omits Date still uses the first receipt's frozen time basis.
+		reference := now
+		if in.ServerTime == "" {
+			reference = now.Add(-time.Duration(w.Spec.ClockOffsetSeconds) * time.Second)
+		}
+		expiry, err := Expiry(token, in.ServerTime, reference, w.Spec.Execution.MaxTokenLifetimeSeconds)
 		if err != nil {
-			return fail("InvalidCredential", Permanent)
+			return invalidCredential(err)
 		}
 		if !w.Spec.ExpiresAt.Time.Equal(expiry) {
 			return fail("ReceiptMismatch", Permanent)
@@ -118,12 +147,16 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 	} else {
 		expiry, err := Expiry(token, in.ServerTime, now, f.Spec.Execution.MaxTokenLifetimeSeconds)
 		if err != nil {
-			return fail("InvalidCredential", Permanent)
+			return invalidCredential(err)
+		}
+		offset, err := clockOffset(in.ServerTime, now)
+		if err != nil {
+			return invalidCredential(err)
 		}
 		if f.Spec.Suspended || !f.DeletionTimestamp.IsZero() {
 			return fail("FleetSuspended", Retryable)
 		}
-		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(f.Spec.Execution), Execution: *f.Spec.Execution.DeepCopy()}}
+		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), ClockOffsetSeconds: offset, CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(f.Spec.Execution), Execution: *f.Spec.Execution.DeepCopy()}}
 		if err := contract.ValidateOrder(w); err != nil {
 			return fail("InvalidReceipt", Permanent)
 		}

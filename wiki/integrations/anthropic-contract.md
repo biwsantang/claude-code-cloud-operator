@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T13:14:43+07:00"
 sources:
   - resource: "https://code.claude.com/docs/en/self-hosted-environments"
   - resource: "https://code.claude.com/docs/en/self-hosted-environments-quickstart"
@@ -65,3 +65,5 @@ unknown API outcomes and cleanup races. No prototype source is copied into this 
 - Test direct-Pod registration, signal shutdown and retention on real supported clusters.
 - Decide whether managed egress proxy packaging belongs in the first release or needs an external integration.
 - Review the project's license before any later source import or public release; no license is selected yet.
+
+The [native spawn-hook contract](https://code.claude.com/docs/en/self-hosted-environments-configuration#the-spawn-runner-hook) supplies the poll response's HTTP Date as `CLAUDE_RUNNER_ORDER_SERVER_TIME` and asks hooks to use it for JWT expiry checks. The operator retains the signed expiry plus a bounded immutable local-minus-server offset, preserving that basis through admission, launch and partial retries. This is lifetime bookkeeping; the native runner validates registration credentials.

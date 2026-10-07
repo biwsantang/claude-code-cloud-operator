@@ -8,6 +8,7 @@ import (
 	"fmt"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -28,6 +29,38 @@ func TestExpiry(t *testing.T) {
 				t.Fatalf("valid=%v err=%v", tc.valid, err)
 			}
 		})
+	}
+}
+
+func TestServerClockLifetime(t *testing.T) {
+	server := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+	token := func(expiry time.Time) []byte {
+		return []byte("synthetic." + base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, expiry.Unix()))) + ".not-a-signature")
+	}
+	for _, skew := range []time.Duration{-time.Hour, -4 * time.Minute, 4 * time.Minute, time.Hour} {
+		local := server.Add(skew)
+		date := server.Format(http.TimeFormat)
+		expiry, err := Expiry(token(server.Add(30*time.Second)), date, local, 60)
+		if err != nil || !expiry.Equal(server.Add(30*time.Second)) {
+			t.Fatal("valid native lifetime rejected because of local clock", err)
+		}
+		offset, err := clockOffset(date, local)
+		if err != nil || offset != int64(skew/time.Second) {
+			t.Fatal("incorrect cluster clock translation", err)
+		}
+		for _, invalid := range []time.Time{server, server.Add(-time.Second), server.Add(61 * time.Second)} {
+			if _, err := Expiry(token(invalid), date, local, 60); err == nil {
+				t.Fatal("server-expired or excessive credential admitted")
+			}
+		}
+	}
+	_, err := Expiry(token(server.Add(time.Hour)), server.Format(http.TimeFormat), server.Add(time.Hour+time.Second), 86400)
+	if !errors.Is(err, ErrClockSkew) || invalidCredential(err).Code != Retryable {
+		t.Fatal("unsafe clock skew must remain retryable")
+	}
+	_, err = Expiry(token(server.Add(time.Hour)), "malformed-date", server, 86400)
+	if err == nil || invalidCredential(err).Code != Permanent {
+		t.Fatal("malformed server time must be permanent")
 	}
 }
 

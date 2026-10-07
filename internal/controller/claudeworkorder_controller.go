@@ -91,7 +91,7 @@ func (r *ClaudeWorkOrderReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if w.Status.LaunchAttempted {
 		return r.observe(ctx, w, now)
 	}
-	if !w.Spec.ExpiresAt.After(now) {
+	if !contract.OrderExpiry(w).After(now) {
 		return r.save(ctx, w, "Expired", "CredentialExpiredBeforeLaunch", true)
 	}
 	if !w.Spec.Complete {
@@ -172,7 +172,7 @@ func (r *ClaudeWorkOrderReconciler) observe(ctx context.Context, w *api.ClaudeWo
 			return r.save(ctx, w, "Lost", "PodDisappeared", true)
 		}
 		// Keep observing possible late POST completion. No second POST, even across restarts.
-		if now.After(w.Spec.ExpiresAt.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds) * time.Second)) {
+		if now.After(contract.CredentialFloor(w)) {
 			return r.save(ctx, w, "Uncertain", "PodNeverObserved", true)
 		}
 		if !w.Status.SubmissionUncertain {
@@ -200,7 +200,7 @@ func (r *ClaudeWorkOrderReconciler) observe(ctx context.Context, w *api.ClaudeWo
 	case corev1.PodRunning:
 		return r.save(ctx, w, "Running", "InfrastructureRunning", false)
 	default:
-		if now.After(w.Spec.ExpiresAt.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds) * time.Second)) {
+		if now.After(contract.CredentialFloor(w)) {
 			// Re-read before UID-constrained deletion. Startup can still race; do not claim atomicity.
 			fresh := &corev1.Pod{}
 			if err := r.Get(ctx, client.ObjectKeyFromObject(p), fresh); err != nil {
@@ -226,7 +226,7 @@ func (r *ClaudeWorkOrderReconciler) save(ctx context.Context, w *api.ClaudeWorkO
 	w.Status.ObservedGeneration = w.Generation
 	if terminal && w.Status.FinishedAt == nil {
 		w.Status.FinishedAt = ptrTime(r.now())
-		floor := w.Spec.ExpiresAt.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds) * time.Second)
+		floor := contract.CredentialFloor(w)
 		diag := r.now().Add(time.Duration(w.Spec.Execution.DiagnosticRetentionSeconds) * time.Second)
 		if diag.After(floor) {
 			floor = diag
@@ -268,7 +268,7 @@ func (r *ClaudeWorkOrderReconciler) cleanup(ctx context.Context, w *api.ClaudeWo
 		}
 	}
 	// Unobserved in-flight requests retain credentials through token validity plus skew.
-	floor := w.Spec.ExpiresAt.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds) * time.Second)
+	floor := contract.CredentialFloor(w)
 	if w.Status.LaunchAttempted && !w.Status.PodObserved && now.Before(floor) {
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}

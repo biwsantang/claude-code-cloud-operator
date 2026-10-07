@@ -26,6 +26,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"net/http"
 	"os"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -208,6 +209,103 @@ func TestAPIRecovery(t *testing.T) {
 		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, d))
 		if *d.Spec.Replicas != 0 {
 			t.Fatal("polling enabled without report")
+		}
+	})
+	t.Run("server-clock-intake-launch-retention-and-redelivery", func(t *testing.T) {
+		for _, skew := range []int64{-240, 240} {
+			t.Run(fmt.Sprint(skew), func(t *testing.T) {
+				f, hc, _ := fixture(t, fmt.Sprintf("clock-%d", skew+240))
+				local := time.Now().UTC().Truncate(time.Second)
+				serverTime := local.Add(-time.Duration(skew) * time.Second)
+				signedExpiry := serverTime.Add(2 * time.Minute)
+				payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, signedExpiry.Unix())))
+				token := []byte("synthetic." + payload + ".not-a-signature")
+				in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "order-clock", ServerTime: serverTime.Format(http.TimeFormat)}
+				result := hook.Run(ctx, &incompleteClient{Client: hc}, in, token, local)
+				if result.Code != hook.Retryable {
+					t.Fatal("partial skewed intake did not persist retryable receipt", result.Reason)
+				}
+				w := &api.ClaudeWorkOrder{}
+				must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(in.Pool, in.Order)}, w))
+				if w.Spec.ClockOffsetSeconds != skew || !w.Spec.ExpiresAt.Equal(&metav1.Time{Time: signedExpiry}) || !contract.OrderExpiry(w).Equal(local.Add(2*time.Minute)) {
+					t.Fatal("signed expiry or cluster clock translation changed")
+				}
+				// A later poll changes its Date; it cannot rewrite the first receipt's time basis.
+				in.ServerTime = serverTime.Add(time.Second).Format(http.TimeFormat)
+				result = hook.Run(ctx, hc, in, token, local.Add(2*time.Second))
+				if result.Code != hook.Submitted {
+					t.Fatal("partial skewed intake did not repair", result.Reason)
+				}
+				must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+				if !w.Spec.Complete || w.Spec.ClockOffsetSeconds != skew {
+					t.Fatal("repair changed the receipt's clock")
+				}
+				forged := w.DeepCopy()
+				forged.Spec.ClockOffsetSeconds++
+				if hc.Update(ctx, forged) == nil {
+					t.Fatal("accepted clock offset can be mutated")
+				}
+				withoutDate := in
+				withoutDate.Order = "order-clock-without-date"
+				withoutDate.ServerTime = serverTime.Format(http.TimeFormat)
+				result = hook.Run(ctx, &incompleteClient{Client: hc}, withoutDate, token, local)
+				if result.Code != hook.Retryable {
+					t.Fatal("missing-Date retry fixture did not remain incomplete")
+				}
+				withoutDate.ServerTime = ""
+				result = hook.Run(ctx, hc, withoutDate, token, local.Add(2*time.Second))
+				if result.Code != hook.Submitted {
+					t.Fatal("partial retry lost clock basis when gateway omitted Date", result.Reason)
+				}
+				var calls atomic.Int32
+				r := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { calls.Add(1); return manager.Create(ctx, p) }}
+				request := ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)}
+				_, err := r.Reconcile(ctx, request)
+				must(t, err)
+				if calls.Load() != 1 {
+					t.Fatal("valid native order did not launch under clock skew")
+				}
+				p := &corev1.Pod{}
+				must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Name}, p))
+				p.Status.Phase = corev1.PodRunning
+				must(t, manager.Status().Update(ctx, p))
+				r.Now = func() time.Time { return contract.CredentialFloor(w).Add(time.Second) }
+				_, err = r.Reconcile(ctx, request)
+				must(t, err)
+				must(t, manager.Get(ctx, client.ObjectKeyFromObject(p), p))
+				if !p.DeletionTimestamp.IsZero() {
+					t.Fatal("clock-corrected expiry terminated running execution")
+				}
+				p.Status.Phase = corev1.PodSucceeded
+				must(t, manager.Status().Update(ctx, p))
+				for i := 0; i < 2; i++ {
+					_, err = r.Reconcile(ctx, request)
+					must(t, err)
+				}
+				must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+				if w.Status.RetainUntil == nil || w.Status.RetainUntil.Before(&metav1.Time{Time: contract.CredentialFloor(w)}) {
+					t.Fatal("clock translation shortened retention floor")
+				}
+				secret := &corev1.Secret{}
+				if err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, secret); !apierrors.IsNotFound(err) {
+					t.Fatal("terminal skewed credential remains")
+				}
+				result = hook.Run(ctx, hc, in, token, contract.CredentialFloor(w).Add(time.Minute))
+				if result.Code != hook.Submitted {
+					t.Fatal("clock-skewed terminal replay rejected")
+				}
+				if calls.Load() != 1 || manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, secret) == nil {
+					t.Fatal("terminal replay resubmitted or recreated credential")
+				}
+				// A different, already expired native order must never reach the launch fence.
+				payload = base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, serverTime.Add(-time.Second).Unix())))
+				in.Order = "order-expired-clock"
+				in.ServerTime = serverTime.Format(http.TimeFormat)
+				result = hook.Run(ctx, hc, in, []byte("synthetic."+payload+".not-a-signature"), local)
+				if result.Code != hook.Permanent {
+					t.Fatal("server-expired order accepted under skew")
+				}
+			})
 		}
 	})
 	t.Run("fleet-converges-without-writes", func(t *testing.T) {

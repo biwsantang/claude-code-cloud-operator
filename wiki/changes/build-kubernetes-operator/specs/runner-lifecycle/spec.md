@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T13:14:43+07:00"
 ---
 
 # Delta: runner lifecycle
@@ -30,12 +30,20 @@ SHALL be rejected; new Fleets SHALL start suspended. It SHALL NOT create externa
 The operator SHALL retain native polling and use its documented asynchronous hook contract.
 Receipts SHALL be keyed by pool/order identity, persisted with their credential before success is returned,
 and frozen after acceptance. Retryable/permanent adapter failures SHALL remain distinguishable.
+When supplied, native server time SHALL determine credential lifetime; a bounded immutable clock translation
+SHALL preserve that time basis through admission, launch, retry and retention.
 
 #### Scenario: Redelivery and partial writes
 
 - **GIVEN** an order redelivered concurrently or after incomplete credential creation
 - **WHEN** intake repeats
 - **THEN** it repairs or matches one receipt/Secret pair; mismatched ownership or credentials are rejected.
+
+#### Scenario: Native server clock differs from the cluster
+
+- **GIVEN** synchronized cluster nodes with a bounded clock difference from the native poll HTTP Date
+- **WHEN** a valid order is accepted, including a partial retry whose gateway omits Date
+- **THEN** one immutable time basis permits a single launch, server-expired orders are rejected and translation never shortens the replay retention floor.
 
 ### Requirement: No repeated operator submission
 

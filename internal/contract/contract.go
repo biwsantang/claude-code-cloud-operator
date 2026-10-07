@@ -165,6 +165,9 @@ func ValidateFleet(f *api.ClaudeRunnerFleet) error {
 	return ValidateExecution(f.Spec.Execution)
 }
 func ValidateOrder(w *api.ClaudeWorkOrder) error {
+	if w.Spec.ClockOffsetSeconds < -3600 || w.Spec.ClockOffsetSeconds > 3600 {
+		return errors.New("receipt clock offset is outside bounds")
+	}
 	if w.Name != Name(w.Spec.PoolID, w.Spec.OrderID) || !safeID.MatchString(w.Spec.PoolID) || !safeID.MatchString(w.Spec.OrderID) || w.Spec.FleetUID == "" || w.Spec.FleetName == "" || len(w.Spec.TokenDigest) != 64 || w.Spec.CredentialSecretRef.Namespace != "" || w.Spec.CredentialSecretRef.Name != w.Name+"-credential" || w.Spec.PolicyDigest != PolicyDigest(w.Spec.Execution) {
 		return errors.New("invalid receipt identity or policy")
 	}
@@ -172,6 +175,20 @@ func ValidateOrder(w *api.ClaudeWorkOrder) error {
 		return errors.New("invalid token digest")
 	}
 	return ValidateExecution(w.Spec.Execution)
+}
+
+// OrderExpiry maps the immutable signed expiry to the synchronized cluster clock domain.
+func OrderExpiry(w *api.ClaudeWorkOrder) time.Time {
+	return w.Spec.ExpiresAt.Add(time.Duration(w.Spec.ClockOffsetSeconds) * time.Second)
+}
+
+// CredentialFloor never shortens retention below either the signed or corrected expiry.
+func CredentialFloor(w *api.ClaudeWorkOrder) time.Time {
+	expiry := OrderExpiry(w)
+	if w.Spec.ExpiresAt.After(expiry) {
+		expiry = w.Spec.ExpiresAt.Time
+	}
+	return expiry.Add(time.Duration(w.Spec.Execution.ClockMarginSeconds) * time.Second)
 }
 func SameReceipt(a, b api.ClaudeWorkOrderSpec) bool {
 	a.Complete = false

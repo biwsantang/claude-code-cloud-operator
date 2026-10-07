@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-// +kubebuilder:validation:XValidation:rule="self.fleetName == oldSelf.fleetName && self.fleetUID == oldSelf.fleetUID && self.poolID == oldSelf.poolID && self.orderID == oldSelf.orderID && self.tokenDigest == oldSelf.tokenDigest && self.expiresAt == oldSelf.expiresAt && self.credentialSecretRef == oldSelf.credentialSecretRef && self.policyDigest == oldSelf.policyDigest",message="Receipt identity and accepted policy are immutable"
+// +kubebuilder:validation:XValidation:rule="self.fleetName == oldSelf.fleetName && self.fleetUID == oldSelf.fleetUID && self.poolID == oldSelf.poolID && self.orderID == oldSelf.orderID && self.tokenDigest == oldSelf.tokenDigest && self.expiresAt == oldSelf.expiresAt && self.clockOffsetSeconds == oldSelf.clockOffsetSeconds && self.credentialSecretRef == oldSelf.credentialSecretRef && self.policyDigest == oldSelf.policyDigest",message="Receipt identity and accepted policy are immutable"
 // +kubebuilder:validation:XValidation:rule="!oldSelf.complete || self.complete",message="Complete receipts cannot be reopened"
 type ClaudeWorkOrderSpec struct {
 	// +kubebuilder:validation:MinLength=1
@@ -22,8 +22,14 @@ type ClaudeWorkOrderSpec struct {
 	// +kubebuilder:validation:MaxLength=256
 	OrderID string `json:"orderID"`
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
-	TokenDigest         string         `json:"tokenDigest"`
-	ExpiresAt           metav1.Time    `json:"expiresAt"`
+	TokenDigest string      `json:"tokenDigest"`
+	ExpiresAt   metav1.Time `json:"expiresAt"`
+	// ClockOffsetSeconds is local minus vendor time measured from the native poll's HTTP Date.
+	// It corrects the signed expiry into the synchronized cluster clock domain; redelivery cannot change it.
+	// +kubebuilder:default=0
+	// +kubebuilder:validation:Minimum=-3600
+	// +kubebuilder:validation:Maximum=3600
+	ClockOffsetSeconds  int64          `json:"clockOffsetSeconds"`
 	CredentialSecretRef LocalReference `json:"credentialSecretRef"`
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	PolicyDigest string          `json:"policyDigest"`

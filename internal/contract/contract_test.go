@@ -5,8 +5,10 @@ import (
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNamesAndBudget(t *testing.T) {
@@ -28,6 +30,26 @@ func TestNamesAndBudget(t *testing.T) {
 	p.Proxy.URL = "http://169.254.169.254:3128"
 	if ValidateExecution(p) == nil {
 		t.Fatal("metadata proxy permitted")
+	}
+}
+
+func TestClockTranslationAndRetention(t *testing.T) {
+	signed := time.Date(2026, 10, 7, 0, 0, 0, 0, time.UTC)
+	for _, offset := range []int64{-3600, 0, 3600} {
+		w := &api.ClaudeWorkOrder{Spec: api.ClaudeWorkOrderSpec{ExpiresAt: metav1.NewTime(signed), ClockOffsetSeconds: offset, Execution: api.ExecutionPolicy{ClockMarginSeconds: 60}}}
+		corrected := signed.Add(time.Duration(offset) * time.Second)
+		if !OrderExpiry(w).Equal(corrected) {
+			t.Fatal("signed expiry was not translated")
+		}
+		floor := CredentialFloor(w)
+		if floor.Before(signed.Add(time.Minute)) || floor.Before(corrected.Add(time.Minute)) {
+			t.Fatal("clock translation shortened replay/credential retention")
+		}
+		changed := w.Spec
+		changed.ClockOffsetSeconds++
+		if SameReceipt(w.Spec, changed) {
+			t.Fatal("clock translation can change on redelivery")
+		}
 	}
 }
 

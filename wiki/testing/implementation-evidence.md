@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:08:00+07:00"
+  at: "2026-10-07T13:16:12+07:00"
 ---
 
 # Implementation evidence
@@ -52,6 +52,21 @@ now form package-level blocks and explicitly generate namespaced Roles. The inst
 permissions, not only generator exit status. The manager must register handlers through
 `mgr.GetWebhookServer()` so controller-runtime adds the server to its runnable lifecycle.
 
+## Clock translation recovery
+
+The native poll HTTP Date determines token lifetime when present. Signed `expiresAt` remains unchanged;
+`clockOffsetSeconds` captures local-minus-server time once, bounded to ±3600 seconds. Admission and launch
+use the corrected cluster deadline. Completion checks the actual credential against that same time basis.
+An incomplete retry with a missing Date preserves the first offset. Schema and admission forbid changing it.
+Terminal retention and unobserved in-flight credentials use the later of signed/corrected expiry plus margin.
+
+`make verify` and the race/API suites on 1.33.0 and 1.37.0 pass. Pure tests exercise both one-hour bounds,
+server-expired and excessive lifetimes, malformed Date, retryable excessive skew and immutable translation.
+API scenarios with ±240 seconds verify incomplete repair, a later/missing Date, completion, one launch,
+running preservation after expiry, terminal credential removal and replay without recreation. These are
+synthetic lifetime tests, not native JWT signature or registration acceptance. Synchronize cluster node clocks;
+the stored offset corrects vendor-to-cluster time and cannot compensate for independent node drift.
+
 ## Minimum-version installation and dependency limits
 
 The separate Kubernetes 1.33.1 cluster used [kind 0.29.0's published node pin](https://github.com/kubernetes-sigs/kind/releases/tag/v0.29.0):
@@ -72,10 +87,10 @@ upstream compatibility guarantee. Do not advertise a universal supported product
 | Plan requirement | Candidate evidence | Remaining acceptance |
 | --- | --- | --- |
 | Declarative fleet intent | CRD defaults, admission, suspended cluster example and scoped convergence. Labels/tolerations/proxy Service and reference names are rejected before submission; portable valid tolerations pass unit tests. | Typed label/toleration/proxy/reference rejection now passes real admission tests; downstream configuration remains pending. |
-| Supported native intake | Native CLI flags, durable repair/concurrency tests, permanent/transient API classifications. | Server-time/clock-skew handling is inconsistent across hook, admission and controller; reopened task 3.1. Real native dispatch unverified. |
+| Supported native intake | Native CLI flags, durable repair/concurrency tests, permanent/transient API classifications. | Clock translation is immutable and checked through completion, launch, retention and missing-Date partial retry. Real native dispatch remains unverified. |
 | No repeated operator submission | Fence/write-boundary recovery, concurrent controllers, single POST transport and lost/late Pod tests. | Physical API/node/scheduling faults and scale remain pending. |
 | Session isolation | Pod builders, installed RBAC denial and enforced Cilium/proxy tests from two fresh Pods. | Downstream network approval and vendor session execution. |
-| Retention and credential safety | Terminal replay, incomplete intake, retention caps, pending/Running DELETE races and fresh projected token transport. | Clock-skew correction must preserve conservative expiry/retention floors. |
+| Retention and credential safety | Terminal replay, incomplete intake, retention caps, pending/Running DELETE races and fresh projected token transport. | Positive/negative offsets preserve the later of signed and corrected expiry plus margin; running Pods survive that floor. Stable synchronized cluster clocks remain an operating prerequisite. |
 | Safe suspension and deletion | Suspend, scoped Drain/Abort, waiting generation, replacement controller and suspended installed-cluster removal. | Active vendor drain and downstream rollback rehearsal. |
 | Honest observations and verification | Sanitized status/events/metrics distinguish infrastructure and connection. | Dedicated registration/turn/git tests, reviewed support matrix, signed release and spec approval. |
 

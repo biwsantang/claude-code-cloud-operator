@@ -44,6 +44,15 @@ spec:
             type: object
           spec:
             properties:
+              clockOffsetSeconds:
+                default: 0
+                description: |-
+                  ClockOffsetSeconds is local minus vendor time measured from the native poll's HTTP Date.
+                  It corrects the signed expiry into the synchronized cluster clock domain; redelivery cannot change it.
+                format: int64
+                maximum: 3600
+                minimum: -3600
+                type: integer
               complete:
                 type: boolean
               credentialSecretRef:
@@ -272,6 +281,7 @@ spec:
                 pattern: ^[a-f0-9]{64}$
                 type: string
             required:
+            - clockOffsetSeconds
             - complete
             - credentialSecretRef
             - execution
@@ -288,8 +298,8 @@ spec:
               rule: self.fleetName == oldSelf.fleetName && self.fleetUID == oldSelf.fleetUID
                 && self.poolID == oldSelf.poolID && self.orderID == oldSelf.orderID
                 && self.tokenDigest == oldSelf.tokenDigest && self.expiresAt == oldSelf.expiresAt
-                && self.credentialSecretRef == oldSelf.credentialSecretRef && self.policyDigest
-                == oldSelf.policyDigest
+                && self.clockOffsetSeconds == oldSelf.clockOffsetSeconds && self.credentialSecretRef
+                == oldSelf.credentialSecretRef && self.policyDigest == oldSelf.policyDigest
             - message: Complete receipts cannot be reopened
               rule: '!oldSelf.complete || self.complete'
           status:

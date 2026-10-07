@@ -169,7 +169,8 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		if err := contract.InputsReady(ctx, h.Reader, f, h.now()); err != nil {
 			return prerequisiteFailure(err, "Fleet intake prerequisites are missing")
 		}
-		if !w.Spec.ExpiresAt.After(h.now()) || w.Spec.ExpiresAt.After(h.now().Add(time.Duration(w.Spec.Execution.MaxTokenLifetimeSeconds)*time.Second)) {
+		deadline := contract.OrderExpiry(w)
+		if !deadline.After(h.now()) || deadline.After(h.now().Add(time.Duration(w.Spec.Execution.MaxTokenLifetimeSeconds)*time.Second)) {
 			return deny("Receipt expiry is outside bounds")
 		}
 		if w.Spec.Complete {
@@ -180,7 +181,8 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 			if !controller.CredentialMatches(w, s) {
 				return deny("Credential receipt is incomplete or mismatched")
 			}
-			expiry, err := hook.Expiry(s.Data[contract.CredentialKey], "", h.now(), w.Spec.Execution.MaxTokenLifetimeSeconds)
+			serverNow := h.now().Add(-time.Duration(w.Spec.ClockOffsetSeconds) * time.Second)
+			expiry, err := hook.Expiry(s.Data[contract.CredentialKey], "", serverNow, w.Spec.Execution.MaxTokenLifetimeSeconds)
 			if err != nil || !expiry.Equal(w.Spec.ExpiresAt.Time) {
 				return deny("Credential expiry does not match the receipt")
 			}
