@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:14:43+07:00"
+  at: "2026-10-07T13:26:03+07:00"
 ---
 
 # Installation and lifecycle operations
@@ -72,3 +72,19 @@ The operator reports infrastructure state; it cannot report a user's session out
 Metrics are disabled by default. If `--metrics-bind-address` is enabled, isolate the endpoint to trusted
 monitoring clients. Its fixed phase labels expose retained infrastructure counts, including terminal observations
 through Pod cleanup. Native/vendor logs and metrics require their own access and cardinality review.
+
+## Reproduce packaging checks
+
+In a fresh disposable `kind-claude-operator-...` cluster, install CNI/cert-manager, load the verified manager
+image and pin its actual loaded target digest. Run:
+
+```sh
+python3 hack/install-smoke.py \
+  --kubeconfig PATH --context kind-claude-operator-NAME \
+  --manager-image REPOSITORY@sha256:DIGEST --evidence RESULT.json
+```
+
+The fixture
+verifies the digest, both installation paths, RBAC denials/positive grants, suspended convergence and drain,
+and removal while retaining CRDs/the namespace. It creates no environment key or activation report. The
+caller removes the disposable cluster after preserving evidence. Never run this fixture on a live installation.

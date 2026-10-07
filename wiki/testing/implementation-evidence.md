@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:16:12+07:00"
+  at: "2026-10-07T13:34:23+07:00"
 ---
 
 # Implementation evidence
@@ -15,7 +15,7 @@ This ledger describes the implementation candidate, not production acceptance. R
 worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
 The [GitHub verification run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37575653587)
 passes all jobs: unit/race/vet/dependency checks, generated-source parity, Linux AMD64/ARM64 cross-builds and both API-server matrix versions.
-The subsequent recovery changes pass local `make verify` and the expanded API-server suite on both versions.
+The clock correction at `938d9eb` passes local `make verify` and the expanded API-server suite on 1.33.0, 1.36.0 and 1.37.0. [Its CI run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37580606346) passes all jobs, including both original API versions and cross-builds. The next CI matrix also includes 1.36.0.
 The tested ARM64 manager architecture-manifest digest at recovery commit `79b8921` is
 `sha256:71cdd7313c567406bd999f5eb9e1e409add3353f3c1480041e7534634bf454bb`.
 This is a local private build, not a published release. The earlier CI link applies to its named commit;
@@ -24,7 +24,7 @@ follow the PR checks for the latest revision.
 | Check | Observed evidence | Limits |
 | --- | --- | --- |
 | Unit/race and dependency checks | `go test -race ./...`, `go vet ./...`, `go mod verify` passed. | Pure builders, lifetime bounds, metrics and token transport; not a running cluster. |
-| API-server recovery | The expanded suite passed under Kubernetes 1.33.0 and 1.37.0 with the race detector in isolated Linux containers. | Envtest has no scheduler, garbage collector or CNI. |
+| API-server recovery | The expanded suite passed under Kubernetes 1.33.0, 1.36.0 and 1.37.0 with the race detector in isolated Linux containers. | Envtest has no scheduler, garbage collector or CNI. |
 | Receipt recovery | Concurrent callers, receipt/Secret response loss, mismatched credential and snapshot/status denial pass. | Includes foreign Secret rejection, Fleet UID/expiry forgery and hook/admin status, deletion and snapshot denials; persisted fence/Pod/terminal status response loss. |
 | Launch recovery | Fence crash, late Pod, lost create response and two concurrent reconciles produce no repeated submission. | Admission dependency-read faults at Fleet, key, report, receipt and credential boundaries return sanitized retryable responses and recover. Physical API unavailability, node loss and scheduling exhaustion remain pending. |
 | Lifecycle | Suspension gates an unlaunched order; running Pods survive expiry; drain and explicit Abort survive controller replacement, preserve unrelated Pods and diagnostic retention. Abandoned partial intake cleans up without submission; expired completed redelivery does not recreate a Secret. | Pending startup tests cover never-started deletion, a fresh read observing Running, and a resourceVersion conflict when Running races with DELETE. Retention caps and projected service-account token refresh pass. Active vendor drain remains pending. |
@@ -32,7 +32,7 @@ follow the PR checks for the latest revision.
 | Fleet convergence | Repeated unchanged reconciles preserve Deployment resourceVersion. | Kind 1.37 installed admission is ready; hook/session/manager namespace permission checks deny unauthorized access. |
 | Hook runtime | AMD64 and ARM64 images install the hook under a read-only root with UID 1000 within the configured 32Mi hook volume. Reproduce with `sh hack/hook-smoke.sh IMAGE PLATFORM`. | AMD64 ran through QEMU on an ARM64 host; it is not a native AMD64-host test. |
 | Vendor runtime | AMD64 and ARM64 private images verify signing-key fingerprint, manifest signature and binary checksum. Read-only UID 1000 smoke prints Claude 2.1.285, Node 24.21.0, Python 3.11.2 and git 2.39.5; required flags exist. | Reproduce with `sh hack/runtime-smoke.sh IMAGE PLATFORM`. AMD64 ran through QEMU. Real registration, session turns and git push remain unverified. |
-| Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm install/upgrade and suspended-Fleet drain/uninstall pass on kind 1.33.1 and 1.37.0. Raw install/admission/drain/removal pass separately on 1.33.1. CRDs and administrator namespace remain. Upper-version raw lifecycle and active vendor drain remain pending. |
+| Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm install/upgrade and suspended-Fleet drain/uninstall pass on kind 1.33.1 and 1.37.0. Raw install/admission/drain/removal pass separately on 1.33.1 and 1.37.0. CRDs and administrator namespace remain. Both sources pass on current clock-fix build at the minimum and upper versions. The installed 1.36 dependency-compatible check and active vendor drain remain pending. |
 | Enforced network | Isolated kind 1.37.0 with Cilium 1.20.2 and cert-manager 1.21.2 passed testing; the cluster was removed. | Two fresh selected Pods deny direct public/private/API/metadata/Pod Identity probes with explicit Cilium policy-denied flows. Approved HTTPS through the proxy passes CA validation, private/IP CONNECT is rejected. This is not downstream approval. |
 
 The reproducible fixture is [`hack/network-smoke.py`](../../hack/network-smoke.py); the sanitized result is
@@ -81,6 +81,14 @@ and the administrator namespace. The isolated cluster was removed; an unrelated 
 [cert-manager's tested version range](https://cert-manager.io/docs/releases/) currently cover Kubernetes 1.33–1.36
 for these dependency releases. The 1.37 installation/network result is local empirical evidence, not their
 upstream compatibility guarantee. Do not advertise a universal supported production matrix from these tests.
+
+The reproducible packaging fixture is [`hack/install-smoke.py`](../../hack/install-smoke.py), restricted to an
+explicit disposable operator kind context and fresh installation namespace. It verifies loaded image targets
+against the requested digest, then runs Helm and raw install/update/admission/RBAC/suspended-drain/removal.
+[Minimum-version evidence](evidence/packaging-v133.json) and [upper-version evidence](evidence/packaging-v137.json) records the tested OCI index digest. The initial local
+child-digest alias pointed at the image index; it contained the correct architecture image, but we corrected
+the pin and reran both paths. The fixture rejects that alias mismatch before installation. This is local
+private-image evidence, not a signed release or active vendor drain.
 
 ## Requirement audit
 

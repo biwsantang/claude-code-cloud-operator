@@ -1,0 +1,29 @@
+{
+  "testedAt": "2026-10-07T06:24:35.574469+00:00",
+  "kubernetes": "v1.37.0",
+  "managerImage": "docker.io/library/claude-cloud-manager@sha256:0d0c6c63242837665460cd05d1f0f3583bdbfd40b03cc1b6adbe1b28925e62e5",
+  "loadedImageDigestVerified": true,
+  "restrictedNamespace": true,
+  "crdsAndNamespaceRetained": true,
+  "liveVendorDispatch": false,
+  "checks": [
+    {
+      "source": "helm",
+      "admissionDryRun": true,
+      "suspendedReplicas": 0,
+      "rbacPositiveAndNegative": true,
+      "upgrade": true,
+      "suspendedDrainAndGC": true,
+      "uninstall": true
+    },
+    {
+      "source": "raw",
+      "admissionDryRun": true,
+      "suspendedReplicas": 0,
+      "rbacPositiveAndNegative": true,
+      "upgrade": true,
+      "suspendedDrainAndGC": true,
+      "uninstall": true
+    }
+  ]
+}

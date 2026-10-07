@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:16:12+07:00"
+  at: "2026-10-07T13:34:23+07:00"
 ---
 
 # Implementation tasks
@@ -62,4 +62,4 @@ Tasks are checked only when their complete verification passes. External release
 Verified candidate slices are recorded in [implementation evidence](../../testing/implementation-evidence.md). Remaining task checkboxes deliberately retain their full verification criteria. Do not start live dispatch while intake,
 launch fencing and security gates remain incomplete. A working demo is not the production acceptance gate.
 
-Task 3.1 now includes end-to-end native Date translation, immutable receipt offsets and missing-Date partial retries. Both API versions verify positive/negative skew, completion, launch, running preservation, cleanup and replay; pure expiry tests cover the one-hour bounds and classifications. Task 6.2 has minimum-version Helm/raw install and removal evidence, but upper-version raw-manifest lifecycle verification remains pending. See the evidence ledger for the exact matrix.
+Task 3.1 now includes end-to-end native Date translation, immutable receipt offsets and missing-Date partial retries. The 1.33.0, 1.36.0 and 1.37.0 API versions verify positive/negative skew, completion, launch, running preservation, cleanup and replay; pure expiry tests cover the one-hour bounds and classifications. Task 6.2 has current clock-fix build Helm/raw install/update/removal evidence on 1.33.1 and 1.37.0; installed 1.36 verification is in progress to include a dependency-compatible upper target. See the evidence ledger for the exact matrix.
