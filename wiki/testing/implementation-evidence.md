@@ -364,5 +364,7 @@ workflow YAML parsing and local Markdown/wiki checks pass.
 Redacted Gitleaks returns five generic-key matches in unchanged runtime/evidence files: one public
 release-key archive hash, one test-log hash, one public signing-key fingerprint and two binary hashes.
 No new match or suppression is introduced. This is reviewed scanner output, not a zero-findings claim.
-Registry publishing, release SBOM/provenance attachment and real Claude/network acceptance have not been
-executed by this local verification. Remote source/image CI is checked separately on the pushed revision.
+The manager's multi-platform OCI export also contains an SPDX SBOM and SLSA provenance for each
+architecture using the release build flags. Registry publishing, tagged-release attachment and real
+Claude/network acceptance have not been executed by this local verification. Remote source/image CI
+is checked separately on the pushed revision.

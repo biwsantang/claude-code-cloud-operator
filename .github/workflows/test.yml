@@ -83,7 +83,7 @@ jobs:
       uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2
       with:
         image: operator-manager:verify
-        grype-version: '0.120.1'
+        grype-version: 'v0.120.1'
         severity-cutoff: critical
         fail-build: true
         only-fixed: false
@@ -93,7 +93,7 @@ jobs:
       uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2
       with:
         image: operator-hook:verify
-        grype-version: '0.120.1'
+        grype-version: 'v0.120.1'
         severity-cutoff: critical
         fail-build: true
         only-fixed: false
