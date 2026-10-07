@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:05:45+07:00"
+  at: "2026-10-07T14:15:26+07:00"
 ---
 
 # Implementation evidence
@@ -25,7 +25,7 @@ follow the PR checks for the latest revision.
 | --- | --- | --- |
 | Unit/race and dependency checks | `go test -race ./...`, `go vet ./...`, `go mod verify` passed. | Pure builders, lifetime bounds, metrics and token transport; not a running cluster. |
 | API-server recovery | The expanded suite passed under Kubernetes 1.33.0, 1.36.0 and 1.37.0 with the race detector in isolated Linux containers. | Envtest has no scheduler, garbage collector or CNI. |
-| Receipt recovery | Concurrent callers, receipt/Secret response loss, mismatched credential and snapshot/status denial pass. | Includes foreign Secret rejection, Fleet UID/expiry forgery and hook/admin status, deletion and snapshot denials; persisted fence/Pod/terminal status response loss. |
+| Receipt recovery | Concurrent callers, receipt/Secret response loss, mismatched credential and snapshot/status denial pass. A completed matching receipt is re-read before acknowledging a failed credential/completion write. | Deterministic completion-before-Secret-admission and lost-completion-response recovery pass; foreign Secret, credential mismatch and immutable intent denials remain enforced. |
 | Launch recovery | Fence crash, late Pod, lost create response and two concurrent reconciles produce no repeated submission. | Admission dependency-read faults at Fleet, key, report, receipt and credential boundaries return sanitized retryable responses and recover. Physical API unavailability, node loss and scheduling exhaustion remain pending. |
 | Lifecycle | Suspension gates an unlaunched order; running Pods survive expiry; drain and explicit Abort survive controller replacement, preserve unrelated Pods and diagnostic retention. Abandoned partial intake cleans up without submission; expired completed redelivery does not recreate a Secret. | Pending startup tests cover never-started deletion, a fresh read observing Running, and a resourceVersion conflict when Running races with DELETE. Retention caps and projected service-account token refresh pass. Active vendor drain remains pending. |
 | Sanitized observations | API tests verify receipts/events do not contain synthetic JWTs and Fleet terminal counts survive Pod removal; metrics unit tests exclude private UID labels. | Infrastructure observations only; vendor outcomes remain unknown. |
@@ -120,6 +120,26 @@ reports exact tested versions; it does not establish every intermediate minor/pa
 | Honest observations and verification | Sanitized status/events/metrics distinguish infrastructure and connection. | Dedicated registration/turn/git tests, reviewed support matrix, signed release and spec approval. |
 
 This audit does not sync draft delta specifications into accepted current specifications.
+
+## Concurrent batch and acknowledgement recovery
+
+`make verify` and the updated API/race suite pass on 1.33.0, 1.36.0 and 1.37.0. The batch exercises 32
+distinct orders with four concurrent deliveries each, bounded to eight test API callers. Two competing
+reconciles per order face a lost Pod-create response; a replacement controller observes every Pod UID.
+Each order records one Pod POST and one durable receipt. Pod deletion followed by another reconcile
+does not issue another POST. This demonstrates no two-session controller cap within that synthetic batch.
+
+The batch exposed a concurrency fault: credential admission can see a completed receipt before another
+delivery's credential request reaches storage, producing a denial rather than AlreadyExists. The hook
+now re-reads after credential/completion write failure and acknowledges only the same UID, matching
+immutable snapshot, valid Fleet owner, completed state and no deletion timestamp. The credential webhook
+still denies that write. A deterministic API test completes the winning delivery immediately before the
+loser's Secret admission; the loser returns the durable accepted result. A different credential remains
+permanently rejected. Lost completion responses can also be acknowledged after confirming persistence.
+
+Envtest does not execute these Pods or run a scheduler/kubelet/CNI. These are bounded API concurrency and
+recovery checks, not production throughput, startup p99, node loss or scheduling-capacity acceptance.
+Task 6.4 remains pending for those criteria.
 
 ## External gates
 

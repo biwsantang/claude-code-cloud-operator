@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:43:50+07:00"
+  at: "2026-10-07T14:15:26+07:00"
 ---
 
 # Implementation tasks
@@ -63,3 +63,8 @@ Verified candidate slices are recorded in [implementation evidence](../../testin
 launch fencing and security gates remain incomplete. A working demo is not the production acceptance gate.
 
 Task 3.1 now includes end-to-end native Date translation, immutable receipt offsets and missing-Date partial retries. The 1.33.0, 1.36.0 and 1.37.0 API versions verify positive/negative skew, completion, launch, running preservation, cleanup and replay; pure expiry tests cover the one-hour bounds and classifications. Task 6.2 has current clock-fix build Helm/raw install/update/removal evidence on 1.33.1, 1.36.4 and 1.37.0, including loaded image digest verification, positive/negative RBAC, suspended drain and retained CRDs/namespace. These are tested candidates; release support and vendor acceptance remain separate gates. See the evidence ledger for the exact matrix.
+
+Tasks 3.2/4.1 also pass a 32-order, 128-delivery API batch with competing reconciles, lost create responses
+and Pod-loss observation on all three API versions. Completed-receipt recovery fixes the concurrent
+credential-admission denial without allowing credential recreation. This partially advances task 6.4;
+physical API/node/scheduling faults and measured startup p99 remain unverified.

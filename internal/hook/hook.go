@@ -170,12 +170,27 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 	immutable := true
 	s := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: w.Spec.CredentialSecretRef.Name, Namespace: w.Namespace, OwnerReferences: []metav1.OwnerReference{contract.Owner(w, "ClaudeWorkOrder")}}, Immutable: &immutable, Type: corev1.SecretTypeOpaque, Data: map[string][]byte{contract.CredentialKey: token}}
 	if err := c.Create(ctx, s); err != nil && !apierrors.IsAlreadyExists(err) {
-		return fail("CredentialWriteFailed", Classify(err))
+		return recoverCompletedReceipt(ctx, c, f, w, err, "CredentialWriteFailed")
 	}
 	w.Spec.Complete = true
 	// Admission reads the Secret uncached and checks owner, immutability and digest before completion.
 	if err := c.Update(ctx, w); err != nil {
-		return fail("ReceiptCompletionFailed", Classify(err))
+		return recoverCompletedReceipt(ctx, c, f, w, err, "ReceiptCompletionFailed")
 	}
 	return Result{Code: Submitted, Reason: "Accepted", Name: name}
+}
+
+// Admission can observe a completed receipt before a concurrent caller's
+// credential create or completion update reaches storage. A matching durable
+// completion is sufficient to acknowledge delivery; never repair its Secret.
+func recoverCompletedReceipt(ctx context.Context, c client.Client, f *api.ClaudeRunnerFleet, w *api.ClaudeWorkOrder, cause error, reason string) Result {
+	latest := &api.ClaudeWorkOrder{}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(w), latest); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fail("ReceiptUnavailable", Classify(err))
+		}
+	} else if latest.UID == w.UID && latest.Spec.Complete && latest.DeletionTimestamp.IsZero() && contract.Owns(f, latest, "ClaudeRunnerFleet") && contract.SameReceipt(w.Spec, latest.Spec) {
+		return Result{Code: Submitted, Reason: "Redelivered", Name: w.Name}
+	}
+	return fail(reason, Classify(cause))
 }

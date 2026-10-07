@@ -739,10 +739,120 @@ func TestAPIRecovery(t *testing.T) {
 		}
 		in.Order = "order-completion"
 		lost = &lostResponseClient{Client: hc, kind: "completion"}
-		if result := hook.Run(ctx, lost, in, token, time.Now()); result.Code != hook.Retryable {
-			t.Fatal("lost completion response not retryable")
+		if result := hook.Run(ctx, lost, in, token, time.Now()); result.Code != hook.Submitted {
+			t.Fatal("durable completion was not acknowledged after response loss")
 		}
 		intake(t, f, hc, token, in.Order)
+	})
+	t.Run("concurrent-completion-before-credential-admission", func(t *testing.T) {
+		f, hc, token := fixture(t, "credential-race")
+		in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "credential-race"}
+		raced := &credentialRaceClient{Client: hc, beforeCredential: func() {
+			if result := hook.Run(ctx, hc, in, token, time.Now()); result.Code != hook.Submitted {
+				t.Fatalf("competing delivery did not complete: %s", result.Reason)
+			}
+		}}
+		result := hook.Run(ctx, raced, in, token, time.Now())
+		if result.Code != hook.Submitted || result.Reason != "Redelivered" || !raced.denied {
+			t.Fatal("completed concurrent receipt was not acknowledged after admission denial")
+		}
+		if replay := hook.Run(ctx, hc, in, append(append([]byte{}, token...), 'x'), time.Now()); replay.Code != hook.Permanent {
+			t.Fatal("mismatched completed credential was acknowledged")
+		}
+	})
+	t.Run("distinct-order-batch-replay-and-competing-reconcilers", func(t *testing.T) {
+		f, hc, token := fixture(t, "batch")
+		const orders, deliveries = 32, 4
+		// Bound pressure on the test API; this is not a production intake quota.
+		slots := make(chan struct{}, 8)
+		results := make(chan hook.Result, orders*deliveries)
+		var wg sync.WaitGroup
+		for i := 0; i < orders; i++ {
+			for j := 0; j < deliveries; j++ {
+				wg.Add(1)
+				go func(i int) {
+					defer wg.Done()
+					slots <- struct{}{}
+					defer func() { <-slots }()
+					in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: fmt.Sprintf("batch-%d", i)}
+					var result hook.Result
+					for retry := 0; retry < 8; retry++ {
+						result = hook.Run(ctx, hc, in, token, time.Now())
+						if result.Code != hook.Retryable {
+							break
+						}
+					}
+					results <- result
+				}(i)
+			}
+		}
+		wg.Wait()
+		close(results)
+		for result := range results {
+			if result.Code != hook.Submitted {
+				t.Fatalf("batch intake failed: %s", result.Reason)
+			}
+		}
+		calls := make(map[string]*atomic.Int32, orders)
+		for i := 0; i < orders; i++ {
+			calls[contract.Name(f.Spec.EnvironmentID, fmt.Sprintf("batch-%d", i))] = &atomic.Int32{}
+		}
+		makeR := func() *controller.ClaudeWorkOrderReconciler {
+			return &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error {
+				counter := calls[p.Name]
+				if counter == nil {
+					return errors.New("unexpected batch Pod")
+				}
+				counter.Add(1)
+				if err := manager.Create(ctx, p); err != nil {
+					return err
+				}
+				return errors.New("synthetic batch create response loss")
+			}}
+		}
+		for name := range calls {
+			for j := 0; j < 2; j++ {
+				wg.Add(1)
+				go func(name string) {
+					defer wg.Done()
+					slots <- struct{}{}
+					defer func() { <-slots }()
+					_, _ = makeR().Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKey{Namespace: namespace, Name: name}})
+				}(name)
+			}
+		}
+		wg.Wait()
+		// A replacement controller observes persisted outcomes, without replaying POSTs.
+		r := makeR()
+		for name, counter := range calls {
+			key := client.ObjectKey{Namespace: namespace, Name: name}
+			_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
+			must(t, err)
+			w := &api.ClaudeWorkOrder{}
+			p := &corev1.Pod{}
+			must(t, manager.Get(ctx, key, w))
+			must(t, manager.Get(ctx, key, p))
+			if counter.Load() != 1 || !w.Status.PodObserved || w.Status.PodUID != string(p.UID) || w.Status.SubmissionUncertain {
+				t.Fatal("batch did not preserve one observed submission per order")
+			}
+			must(t, manager.Delete(ctx, p))
+			_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: key})
+			must(t, err)
+			if counter.Load() != 1 {
+				t.Fatal("batch Pod loss caused replacement")
+			}
+		}
+		all := &api.ClaudeWorkOrderList{}
+		must(t, manager.List(ctx, all, client.InNamespace(namespace)))
+		owned := 0
+		for _, w := range all.Items {
+			if contract.Owns(f, &w, "ClaudeRunnerFleet") {
+				owned++
+			}
+		}
+		if owned != orders {
+			t.Fatalf("distinct durable receipts = %d, want %d", owned, orders)
+		}
 	})
 	t.Run("suspension-and-expiry-preserve-running", func(t *testing.T) {
 		f, hc, token := fixture(t, "suspend")
@@ -926,6 +1036,22 @@ type mutatedReceiptClient struct {
 }
 
 type incompleteClient struct{ client.Client }
+
+type credentialRaceClient struct {
+	client.Client
+	beforeCredential func()
+	denied           bool
+}
+
+func (c *credentialRaceClient) Create(ctx context.Context, o client.Object, opts ...client.CreateOption) error {
+	if _, ok := o.(*corev1.Secret); ok {
+		c.beforeCredential()
+		err := c.Client.Create(ctx, o, opts...)
+		c.denied = apierrors.IsForbidden(err)
+		return err
+	}
+	return c.Client.Create(ctx, o, opts...)
+}
 
 func (c *incompleteClient) Update(ctx context.Context, o client.Object, opts ...client.UpdateOption) error {
 	if w, ok := o.(*api.ClaudeWorkOrder); ok && w.Spec.Complete {
