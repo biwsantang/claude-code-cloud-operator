@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:31:00+07:00"
+  at: "2026-10-07T15:58:46+07:00"
 ---
 
 # Implementation evidence
@@ -219,6 +219,32 @@ preparation. The [candidate guide](../workflows/release-candidates.md) gives ver
 build/sign/verify reproduction and the private key trust policy. The policy has no public transparency log,
 certificate identity or timestamp proof; production signing identity, key lifecycle, license review, container
 artifact checks and release approval remain pending. Task 7.3 is not marked complete from this exercise.
+
+## Compiled dependency notices
+
+Clean source `1641e62cf89ea0d017a0b1d28da29f0acfa2ff4f` produces a 20-file review bundle through
+the candidate producer, with [sanitized notice/signature evidence](evidence/notices-smoke.json).
+The added archive/index bind 102 original notice files from 63 compiled modules and 38 from the selected
+Go 1.27.1 toolchain. Independent reads of all four binaries' embedded build information match the stored
+module/version/checksum records and binary bindings: 63 manager and 55 hook modules per architecture.
+Every one of the 140 archived files matches its source bytes, size and hash; the archive has normalized
+metadata and reproduces identically from the same sources. No local cache paths enter the index.
+
+The collector runs module-cache integrity verification before and after reading, and rejects a compiled
+module outside the current unreplaced build list before collection. This boundary matters because
+`go mod verify` covers the build list, not arbitrary downloaded versions. Ten inventory/notice tests pass,
+covering nested/variant license and patent files, original bytes, deterministic archives, missing license,
+symlinks, inconsistent module/compiler identity, replacement provenance, unsafe paths and size limits.
+`make verify` and the real 1.33.0 API suite pass after the collector change; actionlint, wiki/link validation,
+diff whitespace and redacted secret scan pass.
+
+Actual Cosign signing with temporary test-only keys verifies this clean candidate and rejects modified
+notice archive/index bytes in addition to the previous binary, manifest, missing/extra, symlink and trust-key
+failures. The original candidate remains unsigned, and the temporary signing copies/keys are removed.
+The notice scope deliberately includes whole module/toolchain trees, including uncompiled code; filename
+discovery does not analyze embedded source headers or interpret license obligations. The index explicitly
+retains `licenseReviewApproved: false` and excludes the vendor runtime. Tasks 1.2/7.3 remain pending for
+licensing, container artifacts, vendor/public naming, signing trust, support and release approval.
 
 ## External gates
 
