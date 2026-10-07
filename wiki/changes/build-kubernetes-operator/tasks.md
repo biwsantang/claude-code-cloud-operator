@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:53:00+07:00"
+  at: "2026-10-07T15:31:00+07:00"
 ---
 
 # Implementation tasks
@@ -72,3 +72,10 @@ control-plane pause, worker stop plus explicit Node decommission/recovery, repla
 checks. It exposed and verified a Recreate/current-generation polling fix. Tasks 2.3/6.4 remain unchecked
 for real native revocation/connection and measured registration startup p99; kind default CNI and the
 synthetic report do not replace network or vendor acceptance.
+
+
+Task 7.3 now has private review-bundle build/verification tooling: exact compiler, architecture-specific
+source vulnerability gates, compiled-dependency SBOM coverage, signed inventory verification and tamper/trust
+rejection. A clean committed candidate and ephemeral-key exercise pass; see the evidence ledger. This is
+release preparation, not a production signature or publication. The full native/container, identity, licensing,
+support and approval criteria remain pending, so the checkbox stays unchecked.

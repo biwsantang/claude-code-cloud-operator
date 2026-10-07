@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:53:00+07:00"
+  at: "2026-10-07T15:31:00+07:00"
 ---
 
 # Implementation evidence
@@ -189,6 +189,36 @@ a synthetic fixture assertion, and kind's default CNI does not prove enforcement
 administratively decommissioned; this does not certify automatic cloud-node recovery or downstream eviction
 policy. No production throughput or native registration startup p99 was measured. Tasks 2.3/6.3/6.4 retain
 their corresponding real integration and tuning gates.
+
+## Private candidate and vulnerability checks
+
+Source commit `aa0318de15628e9e8c6fe729fd9c5cdf1caa66cd` builds a clean private review bundle with
+`hack/build-candidate.py`. The [sanitized result](evidence/candidate-smoke.json) records the source/tree
+and candidate manifest digests, Go 1.27.1, Syft 1.54.1, govulncheck v1.8.0 and Cosign 3.1.3.
+The 18 inventoried files include four Linux AMD64/ARM64 binaries, four CycloneDX SBOMs, build information,
+architecture-specific scan output, raw installation resources, the chart and source license. All 63 compiled
+manager modules and 55 compiled hook modules appear in each architecture's SBOM. The chart archive passes
+Helm lint with a verified manager digest; an image remains required at installation.
+
+Source scans report no known reachable Go vulnerabilities for Linux AMD64 and ARM64. A separate disposable
+analysis-only fixture calls `language.ParseAcceptLanguage` from `golang.org/x/text@v0.3.7`; the scanner
+reports [GO-2022-1059](https://pkg.go.dev/vuln/GO-2022-1059) and returns a failing exit code. The fixture is
+not executed and does not modify production dependencies. Text mode gates
+on findings/errors; JSON/SARIF output would not supply that exit-code gate. The old scanner release's analysis
+library did not understand Go 1.27 syntax. The verified module tag v1.8.0 and correctly selected compiler
+provide the tested analysis. This does not clear container OS/native-binary vulnerabilities or future advisories.
+
+The default producer rejects dirty source before creating output. Six independent inventory tests pass.
+The real Cosign exercise uses ephemeral test-only keys and passes signature/inventory verification plus
+wrong-key, changed-manifest, same-size binary tamper, missing/extra file, symlink and candidate-provided-key
+rejection. The original candidate is not signed by that fixture; its private test copy and keys are removed.
+The result explicitly records no production signature, vendor runtime or publication.
+
+`make verify`, `make test-api` on 1.33.0, actionlint, wiki validation and redacted secret scan pass for this
+preparation. The [candidate guide](../workflows/release-candidates.md) gives verified tool asset pins,
+build/sign/verify reproduction and the private key trust policy. The policy has no public transparency log,
+certificate identity or timestamp proof; production signing identity, key lifecycle, license review, container
+artifact checks and release approval remain pending. Task 7.3 is not marked complete from this exercise.
 
 ## External gates
 
