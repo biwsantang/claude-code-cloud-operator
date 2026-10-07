@@ -124,7 +124,9 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	connected := false
 	dep := &appsv1.Deployment{}
 	if err := r.Get(ctx, client.ObjectKey{Namespace: f.Namespace, Name: f.Name + "-orchestrator"}, dep); err == nil {
-		connected = enabled && dep.Status.ObservedGeneration == dep.Generation && dep.Status.AvailableReplicas > 0
+		// Recreate prevents old/new credential and lease generations from polling
+		// together. Old availability must not make an unready replacement Connected.
+		connected = enabled && dep.Status.ObservedGeneration == dep.Generation && dep.Status.UpdatedReplicas > 0 && dep.Status.UpdatedReplicas == dep.Status.Replicas && dep.Status.AvailableReplicas > 0
 	}
 	condition("Connected", connected, "NativeConnectedReadinessProbe")
 	condition("Ready", enabled && connected, "FleetReadinessEvaluated")
@@ -180,6 +182,7 @@ func (r *ClaudeRunnerFleetReconciler) converge(ctx context.Context, f *api.Claud
 	case *appsv1.Deployment:
 		c := current.(*appsv1.Deployment)
 		c.Spec.Replicas = d.Spec.Replicas
+		c.Spec.Strategy = d.Spec.Strategy
 		c.Spec.Template = d.Spec.Template
 	case *networkingv1.NetworkPolicy:
 		current.(*networkingv1.NetworkPolicy).Spec = d.Spec

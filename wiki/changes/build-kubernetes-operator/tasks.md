@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:15:26+07:00"
+  at: "2026-10-07T14:53:00+07:00"
 ---
 
 # Implementation tasks
@@ -67,4 +67,8 @@ Task 3.1 now includes end-to-end native Date translation, immutable receipt offs
 Tasks 3.2/4.1 also pass a 32-order, 128-delivery API batch with competing reconciles, lost create responses
 and Pod-loss observation on all three API versions. Completed-receipt recovery fixes the concurrent
 credential-admission denial without allowing credential recreation. This partially advances task 6.4;
-physical API/node/scheduling faults and measured startup p99 remain unverified.
+the 20-order physical synthetic fixture now passes revoked/missing-key rotation, pending scheduling expiry,
+control-plane pause, worker stop plus explicit Node decommission/recovery, replay and metadata-only one-POST
+checks. It exposed and verified a Recreate/current-generation polling fix. Tasks 2.3/6.4 remain unchecked
+for real native revocation/connection and measured registration startup p99; kind default CNI and the
+synthetic report do not replace network or vendor acceptance.

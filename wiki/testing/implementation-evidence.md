@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:17:12+07:00"
+  at: "2026-10-07T14:53:00+07:00"
 ---
 
 # Implementation evidence
@@ -26,11 +26,11 @@ follow the PR checks for the latest revision.
 | Unit/race and dependency checks | `go test -race ./...`, `go vet ./...`, `go mod verify` passed. | Pure builders, lifetime bounds, metrics and token transport; not a running cluster. |
 | API-server recovery | The expanded suite passed under Kubernetes 1.33.0, 1.36.0 and 1.37.0 with the race detector in isolated Linux containers. | Envtest has no scheduler, garbage collector or CNI. |
 | Receipt recovery | Concurrent callers, receipt/Secret response loss, mismatched credential and snapshot/status denial pass. A completed matching receipt is re-read before acknowledging a failed credential/completion write. | Deterministic completion-before-Secret-admission and lost-completion-response recovery pass; foreign Secret, credential mismatch and immutable intent denials remain enforced. |
-| Launch recovery | Fence crash, late Pod, lost create response and two concurrent reconciles produce no repeated submission. | Admission dependency-read faults at Fleet, key, report, receipt and credential boundaries return sanitized retryable responses and recover. Physical API unavailability, node loss and scheduling exhaustion remain pending. |
+| Launch recovery | Fence crash, late Pod, lost create response and two concurrent reconciles produce no repeated submission. | Admission dependency-read faults at Fleet, key, report, receipt and credential boundaries return sanitized retryable responses and recover. Physical API unavailability, scheduling exhaustion and worker stop/administrative decommission pass in the synthetic kind fixture. Real vendor recovery and production p99 remain pending. |
 | Lifecycle | Suspension gates an unlaunched order; running Pods survive expiry; drain and explicit Abort survive controller replacement, preserve unrelated Pods and diagnostic retention. Abandoned partial intake cleans up without submission; expired completed redelivery does not recreate a Secret. | Pending startup tests cover never-started deletion, a fresh read observing Running, and a resourceVersion conflict when Running races with DELETE. Retention caps and projected service-account token refresh pass. Active vendor drain remains pending. |
 | Sanitized observations | API tests verify receipts/events do not contain synthetic JWTs and Fleet terminal counts survive Pod removal; metrics unit tests exclude private UID labels. | Infrastructure observations only; vendor outcomes remain unknown. |
 | Fleet convergence | Repeated unchanged reconciles preserve Deployment resourceVersion. | Kind 1.37 installed admission is ready; hook/session/manager namespace permission checks deny unauthorized access. |
-| Native connection probe | Synthetic transport tests cover connected/disconnected/missing state, 401/503, transport/read errors, malformed/trailing/oversized JSON, body closure and redirect rejection. The request remains local and bounded to two seconds. | Does not prove native revoked-key behavior or actual vendor connection. Task 2.3 retains that acceptance gate. |
+| Native connection probe | Synthetic transport tests cover connected/disconnected/missing state, 401/503, transport/read errors, malformed/trailing/oversized JSON, body closure and redirect rejection. The request remains local and bounded to two seconds. | Synthetic revoked/missing-key rotation passes in kind; connection follows only the current polling generation. Does not prove native revoked-key behavior or actual vendor connection. Task 2.3 retains that acceptance gate. |
 | Hook runtime | AMD64 and ARM64 images install the hook under a read-only root with UID 1000 within the configured 32Mi hook volume. Reproduce with `sh hack/hook-smoke.sh IMAGE PLATFORM`. | AMD64 ran through QEMU on an ARM64 host; it is not a native AMD64-host test. |
 | Vendor runtime | AMD64 and ARM64 private images verify signing-key fingerprint, manifest signature and binary checksum. Read-only UID 1000 smoke prints Claude 2.1.285, Node 24.21.0, Python 3.11.2 and git 2.39.5; required flags exist. | Reproduce with `sh hack/runtime-smoke.sh IMAGE PLATFORM`. AMD64 ran through QEMU. Real registration, session turns and git push remain unverified. |
 | Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm and raw install/update/admission/suspended-Fleet drain/removal pass on kind 1.33.1, 1.36.4 and 1.37.0 with the clock-fix build. The loaded OCI index matches the requested digest. CRDs and administrator namespace remain; active vendor drain is pending. |
@@ -113,7 +113,7 @@ reports exact tested versions; it does not establish every intermediate minor/pa
 | --- | --- | --- |
 | Declarative fleet intent | CRD defaults, admission, suspended cluster example and scoped convergence. Labels/tolerations/proxy Service and reference names are rejected before submission; portable valid tolerations pass unit tests. | Typed label/toleration/proxy/reference rejection now passes real admission tests; downstream configuration remains pending. |
 | Supported native intake | Native CLI flags, durable repair/concurrency tests, permanent/transient API classifications. | Clock translation is immutable and checked through completion, launch, retention and missing-Date partial retry. Real native dispatch remains unverified. |
-| No repeated operator submission | Fence/write-boundary recovery, concurrent controllers, single POST transport and lost/late Pod tests. | Physical API/node/scheduling faults and scale remain pending. |
+| No repeated operator submission | Fence/write-boundary recovery, concurrent controllers, single POST transport and lost/late Pod tests. | The 20-order physical synthetic fixture passes faults and replay; production throughput and native registration p99 remain pending. |
 | Session isolation | Pod builders, installed RBAC denial and enforced Cilium/proxy tests from two fresh Pods. | Downstream network approval and vendor session execution. |
 | Retention and credential safety | Terminal replay, incomplete intake, retention caps, pending/Running DELETE races and fresh projected token transport. | Positive/negative offsets preserve the later of signed and corrected expiry plus margin; running Pods survive that floor. Stable synchronized cluster clocks remain an operating prerequisite. |
 | Safe suspension and deletion | Suspend, scoped Drain/Abort, waiting generation, replacement controller and suspended installed-cluster removal. | Active vendor drain and downstream rollback rehearsal. |
@@ -139,7 +139,7 @@ permanently rejected. Lost completion responses can also be acknowledged after c
 
 Envtest does not execute these Pods or run a scheduler/kubelet/CNI. These are bounded API concurrency and
 recovery checks, not production throughput, startup p99, node loss or scheduling-capacity acceptance.
-Task 6.4 remains pending for those criteria.
+Task 6.4 remains pending for native registration startup p99 and production capacity tuning; the physical synthetic slice is recorded below.
 
 The hook was rebuilt from an archived, clean source commit `8ff44dc70cae413761d911c6bac0ca76b9a044b9`,
 including the readiness and acknowledgement fixes. Both private images pass `hack/hook-smoke.sh` under
@@ -152,6 +152,43 @@ the configured read-only/non-root/32Mi volume posture; AMD64 executes through QE
 
 Docker image inspection matches these index digests. They are local private builds; they do not replace
 the source-specific clock-fix manager installation evidence or constitute published/signed artifacts.
+
+## Physical synthetic faults and polling revisions
+
+The [`hack/fault-smoke.py` fixture](../../hack/fault-smoke.py) passed on a fresh two-node kind 1.36.4
+cluster with cert-manager 1.21.2. [Sanitized evidence](evidence/fault-smoke.json) records exact local image
+pins, Pod UIDs, checks and 20 orders with one completed, successful audited Pod-create request each.
+Metadata-only audit captured no request/response bodies. Loaded OCI targets match the requested digests.
+The fixture created the cluster and removed it after capture; the unrelated pre-existing cluster was untouched.
+
+Sixteen distinct synthetic runners ran and redelivery retained their UIDs. Revoked/missing synthetic keys
+degraded polling and restoration replaced its process without changing an accepted runner. Worker cordon
+produced an unschedulable pending order; expiry plus the full margin reclaimed it and its credential, and
+terminal replay recreated neither. Uncordon allowed a fresh order. Pausing the control plane made its API
+unavailable; the hook returned a sanitized retryable result, existing runner UIDs survived, and the same
+unaccepted order ran once after recovery. Worker stop first produced Ready=Unknown. Explicit administrator
+Node removal then triggered orphan cleanup; a new Node UID and fresh order recovered, while replay of the
+lost order created no replacement. Abort removed owned execution while the replay-retention finalizer stayed.
+
+The initial physical key test exposed a default rolling-update bug: an old available poller kept the Fleet
+Connected while its new bad-key revision was unready. Orchestrator upgrades now use `Recreate`, and connection
+requires the current observed generation, updated/total replica agreement and current availability. This
+introduces a brief polling outage during template upgrades; accepted session Pods remain independent.
+The new API regression also checks conversion of an existing RollingUpdate child and stale-generation status.
+`make verify` and the full API/race suites on 1.33.0, 1.36.0 and 1.37.0 pass with this polling fix;
+the API matrix was rerun sequentially after removing the disposable fault cluster.
+
+The tested manager OCI index is `sha256:744729f1339e2fe53e234d184be936971e51553b0a7890995b466c5ab73fe095`.
+It was built in the worktree based on `59d970e` with this PR's Recreate/current-generation production delta;
+`sourceBaseCommit` denotes that base, not a claim that the base alone includes the fix. The synthetic runtime
+index is `sha256:149be6b5feeaf2e88956991c328fb8ddf51ebf46fc5e3db5147451f8a5f70f08`; its Go source SHA-256 is
+recorded in the result. The hook is the previously verified `8ff44dc` ARM64 build. These are local private images.
+
+The labelled runtime never contacted Anthropic or registered a session. Its activation report is explicitly
+a synthetic fixture assertion, and kind's default CNI does not prove enforcement. The worker was
+administratively decommissioned; this does not certify automatic cloud-node recovery or downstream eviction
+policy. No production throughput or native registration startup p99 was measured. Tasks 2.3/6.3/6.4 retain
+their corresponding real integration and tuning gates.
 
 ## External gates
 

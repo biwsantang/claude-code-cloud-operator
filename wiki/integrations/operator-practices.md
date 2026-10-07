@@ -6,13 +6,16 @@ tags: [kubernetes, operator, research]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:06:00+07:00"
+  at: "2026-10-07T14:49:00+07:00"
 sources:
   - resource: https://book.kubebuilder.io/reference/good-practices
   - resource: https://ahmet.im/blog/controller-pitfalls/
   - resource: https://github.com/kubernetes-sigs/controller-runtime/blob/main/FAQ.md
   - resource: https://github.com/kubernetes-sigs/kubebuilder/releases/tag/v4.16.0
   - resource: https://github.com/kubernetes-sigs/controller-runtime#compatibility
+  - resource: https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#recreate-deployment
+  - resource: https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller
+  - resource: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#garbage-collection-of-pods
 ---
 
 # Practices that shape this implementation
@@ -57,3 +60,33 @@ before accepting execution intent. The allowed toleration shape follows [Kuberne
 
 API-server tests reject malformed suspended Fleet updates before any launch, avoiding an irreversible fence
 being consumed by a child Pod that the API would reject. The policy also rejects negative eviction seconds.
+
+## Separate unreachable nodes from removed nodes
+
+The [Node controller](https://kubernetes.io/docs/concepts/architecture/nodes/#node-controller) marks an
+unreachable node's Ready condition Unknown; default eviction starts later and can be throttled or stopped
+for unhealthy zones. A stopped machine is not immediate proof that its Pod disappeared or stopped executing.
+
+[Pod garbage collection](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#garbage-collection-of-pods)
+cleans orphan Pods whose Node no longer exists, marking non-terminal Pods Failed during cleanup. The operator
+may therefore observe a failed Pod or its disappearance. Both are infrastructure outcomes, not proof of
+user-session success or failure, and neither permits reusing the same work order.
+
+The physical fault fixture distinguishes worker stop/Unknown from explicit administrative Node decommission.
+It checks orphan cleanup and a fresh Node identity before testing a fresh recovery order. Its evidence must
+not be described as automatic cloud-node replacement, vendor recovery or downstream eviction timing.
+
+## Availability must belong to the current polling revision
+
+A default rolling update can leave an old, healthy orchestrator available while a replacement with a bad
+key never becomes ready. A physical synthetic-key rotation reproduced that failure: the Deployment had
+one available old replica and one updated unready replica, and the previous connection check reported
+Connected. Deployment availability alone is therefore insufficient evidence for current credentials.
+
+The candidate uses current `observedGeneration`, updated/total replica agreement and availability for
+connection status, and `Recreate` for polling template upgrades. This trades a brief polling outage for
+sequential configuration revisions; accepted disposable runner Pods continue separately.
+[Kubernetes documents](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#recreate-deployment)
+that Recreate waits for old Pods to terminate during upgrades, while manually deleted pollers are still
+repaired by their ReplicaSet. It does not establish an at-most-once runner guarantee; durable WorkOrder
+fencing and the direct Pod create path provide the operator's narrower one-submission guarantee.

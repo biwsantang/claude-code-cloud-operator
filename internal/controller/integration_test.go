@@ -374,6 +374,49 @@ func TestAPIRecovery(t *testing.T) {
 			t.Fatal("foreign resource rewritten")
 		}
 	})
+	t.Run("connection-follows-current-polling-generation", func(t *testing.T) {
+		f, _, _ := fixture(t, "connection-generation")
+		r := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		// Upgrade an already-created child from the previous polling strategy.
+		previous := &appsv1.Deployment{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, previous))
+		previous.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+		must(t, manager.Update(ctx, previous))
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		for _, observation := range []struct {
+			replicas, updated int32
+			connected         bool
+		}{{1, 0, false}, {2, 1, false}, {1, 1, true}} {
+			dep := &appsv1.Deployment{}
+			must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, dep))
+			if dep.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType || dep.Spec.Strategy.RollingUpdate != nil {
+				t.Fatal("polling generations may overlap during rollout")
+			}
+			dep.Status.ObservedGeneration = dep.Generation
+			dep.Status.Replicas = observation.replicas
+			dep.Status.UpdatedReplicas = observation.updated
+			dep.Status.ReadyReplicas = 1
+			dep.Status.AvailableReplicas = 1
+			must(t, manager.Status().Update(ctx, dep))
+			_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+			must(t, err)
+			must(t, manager.Get(ctx, client.ObjectKeyFromObject(f), f))
+			if apimeta.IsStatusConditionTrue(f.Status.Conditions, "Connected") != observation.connected {
+				t.Fatal("connection did not distinguish current and old polling generations")
+			}
+		}
+		secret := &corev1.Secret{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.EnvironmentSecretRef.Name}, secret))
+		secret.Data[contract.EnvironmentKey] = []byte("synthetic-new-key-generation")
+		must(t, manager.Update(ctx, secret))
+		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(f), f))
+		if apimeta.IsStatusConditionTrue(f.Status.Conditions, "Connected") {
+			t.Fatal("old observed generation remained connected after key rollout")
+		}
+	})
 	t.Run("foreign-credential-collision", func(t *testing.T) {
 		f, hc, token := fixture(t, "collision")
 		name := contract.Name(f.Spec.EnvironmentID, "order-collision")

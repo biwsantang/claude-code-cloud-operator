@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:26:03+07:00"
+  at: "2026-10-07T14:47:00+07:00"
 ---
 
 # Installation and lifecycle operations
@@ -50,6 +50,17 @@ Service can briefly reject connections while routing converges, even after manag
 side-effect-free check after the endpoint settles; do not disable admission to bypass a startup error. The
 final-image kind test reproduced this transient and then passed the dry run. Dry-run success proves the
 installation path, not vendor or network acceptance.
+
+## Rotate polling credentials or configuration
+
+Updating the referenced environment Secret triggers a credential-revision rollout. Polling upgrades use
+`Recreate`, so all old polling processes terminate before the new template starts; expect a brief intake
+outage even with multiple orchestrator replicas. Existing accepted runner Pods continue independently.
+A missing key disables polling. A replacement with a disconnected native health response remains unready
+and the Fleet reports `Connected=False`; old Deployment availability cannot mask the new generation.
+Repair the external key and inspect current-generation connection/readiness before resuming dispatch.
+Use one common spawn lease value across polling replicas, and tune it only after measuring native
+registration startup p99 in the target environment. Synthetic Pod startup does not measure that latency.
 
 ## Suspend, delete and recover
 

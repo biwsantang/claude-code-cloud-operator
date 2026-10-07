@@ -6,11 +6,12 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:14:43+07:00"
+  at: "2026-10-07T14:47:00+07:00"
 sources:
   - resource: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/"
   - resource: "https://book.kubebuilder.io/reference/good-practices"
   - resource: "https://kubernetes.io/docs/concepts/workloads/controllers/job/"
+  - resource: "https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#recreate-deployment"
 ---
 
 # Operator design
@@ -49,6 +50,15 @@ memory limit, no CPU limit by default. A concrete CR sample follows schema gener
 Proposed defaults: suspended; zero pre-warming; one session per Pod; two native-orchestrator replicas
 when enabled, with one common lease configuration. Hook concurrency affects intake, not fleet size.
 No global session ceiling. ResourceQuota and node capacity may still delay scheduling.
+
+Orchestrator upgrades use `Recreate`: the old polling revision terminates before its replacement starts.
+This prevents key/lease revisions from overlapping during a template rollout and introduces a brief polling
+outage; accepted session Pods have a separate lifecycle and continue. `Connected` requires the Deployment
+controller to have observed the current generation, all reported replicas to be updated, and at least one
+available current replica. Availability from an old revision cannot certify a replacement using a new key.
+[Kubernetes limits Recreate's termination-before-creation guarantee to upgrades](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#recreate-deployment);
+manual Pod deletion still invokes ordinary ReplicaSet repair. This strategy governs pollers only; the direct
+runner Pod and durable launch fence remain the one-submission mechanism.
 
 Use a deterministic per-pool claim resource to reject two managed Fleets for the same environment
 within the watched namespace. The claim does not detect pollers in other clusters; cutover is operational.
