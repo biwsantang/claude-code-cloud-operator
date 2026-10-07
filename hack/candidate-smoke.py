@@ -57,6 +57,16 @@ def main():
         verify("same-size-binary-tamper", False)
         with artifact.open("r+b") as stream:
             stream.write(first)
+        for name in ["third-party-notices.json", "third-party-notices.tar.gz"]:
+            notice = candidate / name
+            if notice.is_file():
+                with notice.open("r+b") as stream:
+                    saved = stream.read(1)
+                    stream.seek(0)
+                    stream.write(bytes([saved[0] ^ 1]))
+                verify(name + "-tamper", False)
+                with notice.open("r+b") as stream:
+                    stream.write(saved)
         artifact.rename(private / "saved-binary")
         verify("missing-artifact", False)
         artifact.symlink_to(private / "saved-binary")

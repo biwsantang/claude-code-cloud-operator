@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:31:00+07:00"
+  at: "2026-10-07T15:52:00+07:00"
 ---
 
 # Implementation tasks
@@ -79,3 +79,8 @@ source vulnerability gates, compiled-dependency SBOM coverage, signed inventory 
 rejection. A clean committed candidate and ephemeral-key exercise pass; see the evidence ledger. This is
 release preparation, not a production signature or publication. The full native/container, identity, licensing,
 support and approval criteria remain pending, so the checkbox stays unchecked.
+
+Tasks 1.2/7.3 also have compiled-module and selected-toolchain notice collection in the candidate producer.
+The archive preserves original nested license/patent/notice files, with exact module checksums, binary bindings
+and signed inventory hashes. Integrity and provenance boundaries pass; collection does not interpret or approve
+licensing. Vendor redistribution, public naming, container notices and release support remain review gates.

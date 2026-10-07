@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tarfile
 
 
@@ -88,6 +89,8 @@ def main():
             catalogued = {component["name"] for component in bom["components"]}
             if dependencies - catalogued:
                 raise RuntimeError("SBOM omits compiled Go dependencies")
+    print(run([sys.executable, str(root / "hack/collect-notices.py"), "--directory", str(output),
+               "--go", str(go_binary)]), end="", flush=True)
     shutil.copyfile(root / "LICENSE", output / "LICENSE")
     shutil.copyfile(root / "config/install/resources.yaml", output / "installation.yaml")
     chart = root / "charts/claude-code-cloud-operator"

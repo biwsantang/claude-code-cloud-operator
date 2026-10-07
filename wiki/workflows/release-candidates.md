@@ -6,16 +6,19 @@ tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:23:00+07:00"
+  at: "2026-10-07T15:52:00+07:00"
 sources:
   - resource: repo://hack/build-candidate.py
   - resource: repo://hack/verify-candidate.py
   - resource: repo://hack/candidate-smoke.py
+  - resource: repo://hack/collect-notices.py
   - resource: repo://.github/workflows/test.yml
   - resource: https://github.com/golang/vuln/tree/v1.8.0
   - resource: https://github.com/anchore/syft/releases/tag/v1.54.1
   - resource: https://github.com/sigstore/cosign/releases/tag/v3.1.3
   - resource: https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
+  - resource: https://go.dev/ref/mod#go-mod-verify
+  - resource: https://www.apache.org/licenses/LICENSE-2.0
 ---
 
 # Build a private review bundle
@@ -30,6 +33,24 @@ for each target architecture, catalogues each compiled binary into a CycloneDX S
 compiled dependency in Go build information appears in the catalogue. The bundle includes build information,
 scan output, raw installation resources, a chart archive and the source license. Chart installation still
 requires a separately verified manager image digest; its empty default is intentional.
+
+The producer also includes `third-party-notices.tar.gz` and `third-party-notices.json` in the signed inventory.
+The [notice collector](../../hack/collect-notices.py) derives the module/version/checksum union from actual
+compiled build information, verifies each download matches that identity, and runs
+[`go mod verify`](https://go.dev/ref/mod#go-mod-verify) before and after collection to detect modified cached
+module source. It preserves original license, notice, patent, copyright and author files recursively, including
+variant names such as `LICENSE-MIT`, plus the selected compiler's notice files. The archive has normalized
+metadata; the index binds original source paths, bytes/hashes and the binaries using each module without
+embedding local cache paths. Missing license files, replacement-module provenance, inconsistent compiler or
+checksum identities, modules outside the current unreplaced build list, symlinks and oversized inputs fail collection.
+
+This deliberately includes whole module/toolchain trees, so it can include notices for uncompiled code.
+Filename discovery is not semantic license analysis: reviewers must check relevant source headers, additional
+terms and distribution obligations. The index always records `licenseReviewApproved: false` and excludes the
+vendor runtime. The [Apache license's redistribution conditions](https://www.apache.org/licenses/LICENSE-2.0)
+include retaining applicable notices; the repository's own license cannot substitute for dependency terms.
+Review container OS licenses and [vendor distribution/public naming](../integrations/anthropic-contract.md)
+separately before publishing. Neither an SBOM nor a collected notice archive proves licensing approval.
 
 `candidate.json` binds every file's SHA-256 and size, the source commit/tree digest, tool versions and dirty
 source flag. It always records `releaseApproved: false` and `vendorRuntimeIncluded: false`. The source
@@ -71,6 +92,8 @@ review. An SBOM is inventory evidence, not a license or vulnerability clearance.
 requires Enterprise Cloud for private/internal repositories. Do not change repository visibility or assume
 that feature is available. This candidate path supports self-managed/KMS signing keys with an independently
 distributed public key; the release identity and key management remain an acceptance decision.
+Native environment keys, session/OAuth credentials and Anthropic's JWT verification keys serve separate
+authentication purposes and cannot substitute for this release signing identity.
 
 After that identity is selected, sign the manifest, which binds the complete inventory:
 
@@ -104,4 +127,4 @@ removes them on completion. It verifies the real Cosign signing path, then rejec
 modified manifest, same-size binary change, missing/extra files, symlinks and a candidate-provided key.
 It never signs the original candidate or creates a production key. [Implementation evidence](../testing/implementation-evidence.md)
 records observed results and their source state. `make test-candidate` runs independent inventory-boundary
-unit tests; `make verify` includes them. Publication and real vendor acceptance remain pending.
+unit tests and notice/provenance boundaries; `make verify` includes them. Publication and real vendor acceptance remain pending.
