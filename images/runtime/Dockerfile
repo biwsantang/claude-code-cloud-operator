@@ -10,7 +10,9 @@ RUN printf '%s\n' 'deb [check-valid-until=no] https://snapshot.debian.org/archiv
     apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-venv ripgrep bash openssh-client && \
     apt-get clean && mkdir -p /workspace /home/runner /etc/claude && chown -R 1000:1000 /workspace /home/runner
 COPY images/runtime/install-npm.sh /tmp/install-npm.sh
-RUN sh /tmp/install-npm.sh && rm /tmp/install-npm.sh
+COPY images/runtime/install-npm-overrides.py /tmp/install-npm-overrides.py
+RUN sh /tmp/install-npm.sh && python3 /tmp/install-npm-overrides.py && \
+    rm /tmp/install-npm.sh /tmp/install-npm-overrides.py
 FROM tools AS native
 ARG TARGETARCH
 RUN apt-get install -y --no-install-recommends gnupg jq

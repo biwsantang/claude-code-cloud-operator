@@ -16,7 +16,7 @@ package: manifests
 test:
 	$(GO) test -race ./...
 test-candidate:
-	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s hack -p 'test_candidate.py'
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s hack -p 'test_*.py'
 test-api:
 	@if [ "$$(uname -s)" = Darwin ]; then \
 	 docker run --rm --mount type=bind,src="$(CURDIR)",dst=/workspace \

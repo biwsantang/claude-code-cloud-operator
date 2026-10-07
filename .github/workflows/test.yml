@@ -25,7 +25,7 @@ jobs:
       with:
         go-version-file: go.mod
     - run: go mod verify && go test -race ./... && go vet ./...
-    - run: python3 -m unittest discover -s hack -p 'test_candidate.py'
+    - run: python3 -m unittest discover -s hack -p 'test_*.py'
       env:
         PYTHONDONTWRITEBYTECODE: '1'
     - run: go install sigs.k8s.io/kustomize/kustomize/v5@v5.8.1

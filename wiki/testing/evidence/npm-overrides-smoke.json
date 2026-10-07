@@ -1,0 +1,127 @@
+{
+  "testedAt": "2026-10-07T09:58:28.207052+00:00",
+  "sourceBaseCommit": "7f57db4c19fed7ba5a593eb7b785c9155061b4de",
+  "sourceFilesSHA256": {
+    "images/runtime/Dockerfile": "8e17ddbc47a12cfa15d4dd64be12e08df5f79ed1e853bc43016d47f6324b8658",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "images/runtime/install-npm-overrides.py": "67512f5c8370da38fd3db906dc62a3e7ad6646a74a85d49610c6395939aea792",
+    "hack/runtime-smoke.sh": "0bc4f0c2a52b84f82a2c40de158e948016f426bd6993b911b453f321349947e0",
+    "hack/npm-security-smoke.cjs": "b8ee71a205748c9dfa86683550fa1ec956956a33f059057712107c6428c49bf1",
+    "hack/test_npm_overrides.py": "937dc42612229dc2140a0625451d6c100b9e4d8bb3b2b6eb51b9a3847efc9d25",
+    ".github/workflows/test.yml": "013e4eaefc1fb8e868618684772b4ebf17141c7e95c4a8dfb2d85992fb16ea3f",
+    "Makefile": "a30a350f88d6d9ddb5f3dae7d9ca160dd5ce9a4734fbb979fc2545fc19986cf8"
+  },
+  "grypeVersion": "0.120.1",
+  "scope": "squashed",
+  "ignoreRules": [],
+  "criticalThresholdEnabled": true,
+  "results": [
+    {
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:430f7bf02bfbba209ddb74a1e003359bab037a89b78906ceaebe13c7073516a9",
+      "imageConfigID": "sha256:6278b082e75f28b74d8eac6ea6465e102826ea68f6c2f4f0d9a0a8fe8d073ebe",
+      "scannerManifestDigest": "sha256:80aa4d60fb7abab572ade6037da43593becd65eb898ad4d5b7f4fe839daf1f5a",
+      "scannerManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "rawReportSHA256": "2d620fc657f4c08a5c406f4d31250d83d1ee1c61062a7ccc1fbcbcdf3b6d7a4c",
+      "scanTimestamp": "2026-10-07T16:56:41.080183+07:00",
+      "matchesBySeverity": {
+        "Negligible": 142,
+        "High": 126,
+        "Critical": 27,
+        "Medium": 185,
+        "Low": 36,
+        "Unknown": 17
+      },
+      "ignoredMatchCount": 0,
+      "fixableHighCount": 0,
+      "criticalGatePassed": false,
+      "criticalGateExitCode": 2
+    },
+    {
+      "platform": "linux/amd64",
+      "localImageIndexID": "sha256:e8340533ca64980246103c9e32998861cdc0781b613d236a22985916ac584735",
+      "imageConfigID": "sha256:854bf797052bd5b035f54e80f132432735ad09371d0e0be4fef20f62cae10ef4",
+      "scannerManifestDigest": "sha256:c969ffc2348c08dad1ef9f63c0f45dce9f44fff84286e2c0da8cc649b8e2c7f6",
+      "scannerManifestMediaType": "application/vnd.docker.distribution.manifest.v2+json",
+      "rawReportSHA256": "e0d1f9d288c9d7a0c6e92038d3ccfa4f69c1852f4625077437e250ee3dd7a9e6",
+      "scanTimestamp": "2026-10-07T16:56:17.723054+07:00",
+      "matchesBySeverity": {
+        "Negligible": 142,
+        "High": 126,
+        "Critical": 27,
+        "Medium": 185,
+        "Low": 36,
+        "Unknown": 17
+      },
+      "ignoredMatchCount": 0,
+      "fixableHighCount": 0,
+      "criticalGatePassed": false,
+      "criticalGateExitCode": 2
+    }
+  ],
+  "imageOverrideRecord": {
+    "npmVersion": "11.21.0",
+    "overrides": [
+      {
+        "name": "brace-expansion",
+        "version": "5.0.11",
+        "sha512": "6b08a08e18ba70b4e1f746ddc3af9027d0ad9899b26211088bbd2209b73c468ce7d38170f457902018effc4db61451ae086c756cb27251f07ae31feccd449752",
+        "dependencies": {
+          "balanced-match": "^4.0.2"
+        },
+        "advisories": [
+          "GHSA-6j4f-fj2g-mc7p",
+          "GHSA-qhr7-859c-m2p7"
+        ],
+        "archiveURL": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.11.tgz"
+      },
+      {
+        "name": "undici",
+        "version": "6.28.1",
+        "sha512": "cd6a5d4d50f9e07e3c088c9b2f4ad6437ba4a5bf5ddb7c0cede1f946d7dd99e3fbd1c587363b5fa3b3f8bd95fee42a0370ee772783eee6e5e9ee535f8dce8344",
+        "dependencies": {},
+        "advisories": [
+          "GHSA-rfgv-xxqx-mfg5"
+        ],
+        "archiveURL": "https://registry.npmjs.org/undici/-/undici-6.28.1.tgz"
+      }
+    ]
+  },
+  "arm64NativeFullSmokePassed": true,
+  "arm64FullSmokeLogSHA256": "6c0757ec99d4ccca3a0ade4840fa883c5c13a9b6188d22449ce64bff0629dc49",
+  "amd64NativeFullSmokePassed": false,
+  "amd64HardwareCIPending": true,
+  "baseline": {
+    "imageIndexID": "sha256:4ed9434dfaa2c3c0c9de751dcaf82f20e6b26f27b0accfb7399fa18df64538d4",
+    "braceExpansionVersion": "5.0.9",
+    "undiciVersion": "6.28.0",
+    "braceRecursionProbeExitCode": 1,
+    "undiciUnrequestedProtocolProbeExitCode": 1,
+    "braceLogSHA256": "0de25f573ec0019c8d7d3a984e971b5d071b2ef160bb72c5c29ea00c02eec025",
+    "undiciLogSHA256": "852a6c79f53cbb1b50b2fba334dffbfacb204fdafeb8380c4dc17edb75ae35c4",
+    "undiciFixtureSHA256": "a17bf51daef59e2875dd5981728a80021ad7b9811deba08e6bf7253822313e0c"
+  },
+  "releaseApproved": false,
+  "vendorAcceptancePassed": false,
+  "published": false,
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "arm64OriginalUpstreamFileBytesVerified": {
+    "fileCount": 189,
+    "allMatch": true,
+    "includesLicenseFiles": true
+  },
+  "localVerification": {
+    "makeVerify": true,
+    "makeTestAPI": "1.33.0",
+    "pythonTestCount": 14,
+    "actionlint": true,
+    "wikiPagesValidated": 20,
+    "redactedSecretScan": true
+  }
+}

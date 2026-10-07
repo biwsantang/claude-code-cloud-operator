@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T16:42:40+07:00"
+  at: "2026-10-07T16:58:28+07:00"
 ---
 
 # Implementation evidence
@@ -259,6 +259,16 @@ no vulnerability waiver, production signature, vendor session or release publica
 
 `make verify` and the real 1.33.0 API suite pass after the SDK/smoke/CI change. Successful code tests do not clear
 container Critical findings; task 7.3 remains pending.
+
+## npm bundled dependency overrides
+
+The [runtime review](runtime-vulnerability-review.md) and [override evidence](evidence/npm-overrides-smoke.json)
+record compatible, checksum-pinned upstream brace-expansion 5.0.11/undici 6.28.1 replacements with retained
+license files and an image-local override record. Both final local architecture scans remove all three
+previously fixable bundled-dependency High matches without suppression; remaining counts include 27 Critical
+and 126 High matches. The Critical release gate still fails. ARM64 native SDK and actual advisory probes pass;
+the old bundle reproduces the reported failures. Matching AMD64 hardware CI is pending for this changed image.
+Task 5.1 is reopened until that execution check completes; no signing key is generated or release published.
 
 ## External gates
 

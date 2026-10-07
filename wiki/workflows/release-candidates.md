@@ -6,7 +6,7 @@ tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:52:00+07:00"
+  at: "2026-10-07T16:54:15+07:00"
 sources:
   - resource: repo://hack/build-candidate.py
   - resource: repo://hack/verify-candidate.py
@@ -19,6 +19,9 @@ sources:
   - resource: https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
   - resource: https://go.dev/ref/mod#go-mod-verify
   - resource: https://www.apache.org/licenses/LICENSE-2.0
+  - resource: https://docs.sigstore.dev/cosign/signing/signing_with_containers/
+  - resource: https://docs.sigstore.dev/cosign/signing/signing_with_blobs/
+  - resource: repo://api/v1alpha1/clauderunnerfleet_types.go
 ---
 
 # Build a private review bundle
@@ -85,6 +88,31 @@ that JSON/SARIF output exits zero even with findings. CI and the producer use te
 scan errors fail the gate. These checks cover known reachable Go vulnerabilities for the selected build;
 reflection/unsafe limitations, container OS packages, the vendor binary and future advisories need separate
 review. An SBOM is inventory evidence, not a license or vulnerability clearance.
+
+## Signing responsibility and installation
+
+KMS is optional publisher infrastructure. Operator installers and Fleet authors do not need a signing
+key, a KMS account or a KMS field in the CRD. The running manager/hook/session Pods never receive a
+release-signing private key or KMS signing permission. Release CI or the maintainer signs artifacts;
+consumers verify the expected publisher identity/public key before using pinned image digests.
+
+[Cosign supports encrypted local keys and KMS](https://docs.sigstore.dev/cosign/signing/signing_with_containers/).
+The current private candidate verifier supports a supplied independently trusted public key, regardless
+of whether its corresponding private key is stored as a managed encrypted file or in KMS. Production
+key bootstrap, custody, public-key distribution and rotation belong to the publisher. The operator must
+not generate a key and treat its own signatures as an independent release trust anchor.
+
+For future public releases, [keyless CI signing](https://docs.sigstore.dev/cosign/signing/signing_with_blobs/)
+is recommended: an ephemeral key is bound to OIDC identity, with verification restricted to the intended
+release workflow identity and issuer. This is a proposed publishing option; `verify-candidate.py` has no
+keyless mode today. Public transparency-log disclosure must be considered while this repository is private.
+The existing offline private-key policy below remains the implemented candidate path.
+
+The Anthropic environment credential is a separately supplied namespace Secret reference. Optional
+external secret synchronization belongs to downstream infrastructure. Admission webhook TLS is a third
+responsibility: installation manifests use cert-manager to issue/renew certificates and inject the CA.
+Automated webhook certificate management does not authorize the operator to create release-signing keys
+or Anthropic credentials. See the [installation guide](../operations/install-and-drain.md).
 
 ## Private signing policy
 
