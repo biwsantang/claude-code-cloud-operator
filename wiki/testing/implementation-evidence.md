@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:58:13+07:00"
+  at: "2026-10-07T18:04:52+07:00"
 ---
 
 # Implementation evidence
@@ -299,7 +299,9 @@ is absent and explicitly rejected. Actual remote SSH, vendor Git and hardware to
 Grype reports 24 Critical matches, all in curl/libcurl, with zero ignored matches and a failed release
 threshold. Syft does not identify the compiled SSH clients; the image's pinned source/binary build record
 supplements that inventory gap. The missing old package match alone does not prove a security fix.
-Local AMD64 compilation failed under QEMU; matching native AMD64 CI is pending and task 5.1 stays reopened.
+Local AMD64 compilation failed under QEMU; [matching native AMD64 CI passes](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37611163966/job/112758476250)
+for exact source f261cc1, including all SSH/SDK checks. Task 5.1 is restored; the new image has only
+an ARM64 container rescan, and no AMD64 scan clearance is claimed.
 Local `make verify` and the real Kubernetes 1.33.0 API-server suite pass. No release or vendor acceptance
 is inferred from these results.
 

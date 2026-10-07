@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:58:13+07:00"
+  at: "2026-10-07T18:04:52+07:00"
 ---
 
 # Implementation tasks
@@ -42,7 +42,7 @@ Tasks are checked only when their complete verification passes. External release
 
 ## 5. Runtime and security
 
-- [ ] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
+- [x] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
 - [x] 5.2 Generate Pod security/storage/resources and configurable placement; verification: no API/environment key/cloud identity access from sessions and no fleet concurrency cap introduced.
 - [x] 5.3 Establish proxy/egress integration and network acceptance report format; verification: direct/proxied denial and fresh-Pod startup tests on enforced-network clusters, not envtest alone.
 
@@ -100,5 +100,7 @@ execute the full restricted SDK/CLI smoke, including offline Python venv/pip and
 Both final architecture scans retain 25 Critical matches; eight earlier matches disappear and six
 newer-version curl matches are added. This advances task 7.3 without clearing its release gate.
 
-Task 5.1 is reopened for the pinned upstream OpenSSH client revision until both native architecture
-SDK/smoke checks pass. Task 7.3 retains all remaining runtime vulnerability and release gates.
+Task 5.1 passes for the pinned upstream OpenSSH 10.6p1 revision after matching native ARM64 and
+AMD64 CI execute the full restricted SSH/SDK smoke. Automated Syft does not identify the compiled
+SSH clients; the pinned signed-source/binary record supplements this inventory gap. The ARM64 scan
+retains 24 Critical curl/libcurl matches. Task 7.3 retains runtime vulnerability and release gates.

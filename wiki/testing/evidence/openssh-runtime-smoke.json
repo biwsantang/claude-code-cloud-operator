@@ -356,8 +356,8 @@
   },
   "opensshOriginalLicenseSHA256": "5bb5b160726ef5756e4f32fe95b35249c294962419650f48d05134b486d27ccb",
   "arm64NativeFullSmokePassed": true,
-  "amd64NativeFullSmokePassed": false,
-  "amd64HardwareCIPending": true,
+  "amd64NativeFullSmokePassed": true,
+  "amd64HardwareCIPending": false,
   "localAMD64EmulatedBuild": {
     "passed": false,
     "reason": "GCC cc1 internal compiler error/segmentation fault during QEMU compilation; no resulting image or acceptance",
@@ -399,5 +399,20 @@
       "classification": "public upstream signer fingerprint/release archive SHA-256 and source-bound binary SHA-256; no bearer credentials",
       "redactedReportSHA256": "252af705dc8deb7b2505ef6593ee65a8d07bbb3ff5b77d946c352e45487a7284"
     }
+  },
+  "testedSourceCommit": "f261cc19b589f10a960ee9a738678138c22445df",
+  "amd64NativeCI": {
+    "runID": 37611163966,
+    "jobID": 112758476250,
+    "sourceCommit": "f261cc19b589f10a960ee9a738678138c22445df",
+    "runner": "GitHub-hosted ubuntu-24.04 AMD64",
+    "jobURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37611163966/job/112758476250",
+    "conclusion": "success",
+    "completedAt": "2026-10-07T11:03:06Z",
+    "rawLogSHA256": "b9739c0708777ecdc9641e15b6f7ef342f7742741ac62a031c3fadbf6b8c110d",
+    "jobMetadataSHA256": "830ee6591d5e9eb5d75346059d9c58e5d60198797ee820b3faae3448a2d30891",
+    "sourceFilesMatchEvidence": true,
+    "imagePublished": false,
+    "containerRescanPerformed": false
   }
 }
