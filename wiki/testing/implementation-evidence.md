@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T16:58:28+07:00"
+  at: "2026-10-07T17:02:49+07:00"
 ---
 
 # Implementation evidence
@@ -267,8 +267,8 @@ record compatible, checksum-pinned upstream brace-expansion 5.0.11/undici 6.28.1
 license files and an image-local override record. Both final local architecture scans remove all three
 previously fixable bundled-dependency High matches without suppression; remaining counts include 27 Critical
 and 126 High matches. The Critical release gate still fails. ARM64 native SDK and actual advisory probes pass;
-the old bundle reproduces the reported failures. Matching AMD64 hardware CI is pending for this changed image.
-Task 5.1 is reopened until that execution check completes; no signing key is generated or release published.
+the old bundle reproduces the reported failures. [Matching AMD64 hardware CI](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37604394799) passes for this changed image, including actual advisory and offline SDK probes.
+Task 5.1 is restored after that execution check; no signing key is generated or release published.
 
 ## External gates
 

@@ -90,8 +90,8 @@
   },
   "arm64NativeFullSmokePassed": true,
   "arm64FullSmokeLogSHA256": "6c0757ec99d4ccca3a0ade4840fa883c5c13a9b6188d22449ce64bff0629dc49",
-  "amd64NativeFullSmokePassed": false,
-  "amd64HardwareCIPending": true,
+  "amd64NativeFullSmokePassed": true,
+  "amd64HardwareCIPending": false,
   "baseline": {
     "imageIndexID": "sha256:4ed9434dfaa2c3c0c9de751dcaf82f20e6b26f27b0accfb7399fa18df64538d4",
     "braceExpansionVersion": "5.0.9",
@@ -123,5 +123,21 @@
     "actionlint": true,
     "wikiPagesValidated": 20,
     "redactedSecretScan": true
+  },
+  "amd64HardwareCI": {
+    "sourceCommit": "18834fab88c924611a352311bb643044b4749a9b",
+    "runURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37604394799",
+    "job": {
+      "completedAt": "2026-10-07T10:00:46Z",
+      "conclusion": "success",
+      "databaseId": 112736254395,
+      "name": "runtime-amd64",
+      "startedAt": "2026-10-07T09:59:52Z",
+      "status": "completed",
+      "url": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37604394799/job/112736254395"
+    },
+    "jobLogSHA256": "09ab899e0553d4223bce2bc88b271ec7a106d3b3235129ab68edfba8fb55ae4d",
+    "vendorRegistration": false,
+    "targetNodeCPUAcceptance": false
   }
 }
