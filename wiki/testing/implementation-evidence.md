@@ -6,13 +6,18 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T12:24:00+07:00"
 ---
 
 # Implementation evidence
 
 This ledger describes the implementation candidate, not production acceptance. Run commands from the feature
-worktree. Final commit and CI evidence will be added after the complete verification pass.
+worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
+The [GitHub verification run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37575653587)
+passes all jobs: unit/race/vet/dependency checks, generated-source parity, Linux AMD64/ARM64 cross-builds and both API-server matrix versions.
+The final-source ARM64 manager manifest digest is
+`sha256:22e0c09a5bcaa932a06e142cb967c28b8f74d86412b97f1f84b2d6f89ef761b7`.
+It installs, upgrades and accepts the suspended example through actual server-side dry-run admission. Final-source Helm uninstall also passes. The isolated cluster was removed after preserving sanitized evidence.
 
 | Check | Observed evidence | Limits |
 | --- | --- | --- |

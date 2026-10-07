@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T12:24:00+07:00"
 ---
 
 # Installation and lifecycle operations
@@ -37,6 +37,13 @@ Do not associate session identities with cloud roles. Keep image/config/Fleet/re
 Avoid mutable configuration names. Publish immutable ConfigMaps under new names; retain referenced versions
 until their orders finish. Old policy revisions remain while the Fleet exists to preserve active boundaries.
 Source TLS certificate handling is generic and separate from inference credentials.
+
+After `helm --wait`, verify the Certificate is Ready and the webhook Service has ready EndpointSlices, then
+run `kubectl apply --dry-run=server -k config/samples` using the intended kubeconfig/context. A newly created
+Service can briefly reject connections while routing converges, even after manager readiness. Retry this
+side-effect-free check after the endpoint settles; do not disable admission to bypass a startup error. The
+final-image kind test reproduced this transient and then passed the dry run. Dry-run success proves the
+installation path, not vendor or network acceptance.
 
 ## Suspend, delete and recover
 

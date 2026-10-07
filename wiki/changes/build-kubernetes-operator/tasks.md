@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T12:29:00+07:00"
 ---
 
 # Implementation tasks
@@ -18,7 +18,7 @@ Tasks are checked only when their complete verification passes. External release
 - [x] 1.1 Evaluate the existing operator against crash/replay/security requirements; verification: record upstream gaps and select adoption, licensed fork or independent implementation before scaffolding.
 
 - [ ] 1.2 Choose license and supported Go/Kubebuilder/Kubernetes/Claude versions; verify compatibility, binary integrity and redistribution policy before selecting release pins.
-- [ ] 1.3 Scaffold Go manager and hook commands; verification: build and unit test on AMD64/ARM64, dependency lock and credential-free CI.
+- [x] 1.3 Scaffold Go manager and hook commands; verification: build and unit test on AMD64/ARM64, dependency lock and credential-free CI.
 - [x] 1.4 Add CRD types, defaults, status subresources and admission; verification: generated schema, rejected unsafe/cross-namespace/mutable-order inputs and gated intake until admission is ready.
 
 ## 2. Fleet reconciliation
