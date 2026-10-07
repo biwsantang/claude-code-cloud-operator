@@ -1,0 +1,318 @@
+{
+  "testedAt": "2026-10-07T18:28:41+07:00",
+  "sourceBaseCommit": "3ae981ee919c74970c55f92da329d2ff32b2310b",
+  "sourceFilesSHA256": {
+    "images/runtime/Dockerfile": "4bdd93cd4c20a24c64a7faef11c296d44331aff906e2f4c302d1e582338db10a",
+    "images/runtime/build-curl.py": "b275975e9a7ae7d775f44870e4f3023771fce9b881f0b4b66973b4d7c1427600",
+    "images/runtime/build-openssh.py": "88a2c7776062ceb9e6b79d043c7940b325757d2d4086cdbcf7e2e23250c0af84",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "images/runtime/install-npm-overrides.py": "67512f5c8370da38fd3db906dc62a3e7ad6646a74a85d49610c6395939aea792",
+    "hack/runtime-smoke.sh": "dadb60882f5b2f951562c4a6e3d1e377d704902e9eee14959d5b3f6e12deaf5f",
+    "hack/runtime-curl-smoke.py": "09855b8c58d35b9893bbd645efad2152c1fc3266f53b309e25537442bbb45842",
+    "hack/runtime-ssh-smoke.py": "030973b425e916aaa54c0c28634dc7b482c5f9a6abc8cc100b8bf71182c9d05e",
+    "hack/runtime-python-smoke.py": "6923011778cb7b371c35c333266d94ed863b17b11ce58711d969d25dd3314f32",
+    "hack/npm-security-smoke.cjs": "b8ee71a205748c9dfa86683550fa1ec956956a33f059057712107c6428c49bf1",
+    "hack/runtime-scan.py": "7b0bb2562f193ff19bdb67b575f1d58d7dd5222bbc7c97b1c6766d29cd7cf2c2",
+    ".github/workflows/test.yml": "57159de780d820b77e0b8b2b7b946d2178d2fb5ab3e2a618dfd6ff60d859f7e0"
+  },
+  "platform": "linux/arm64",
+  "localImageIndexID": "sha256:98c4d7fbf59e4e2393fd9bb56cd794d8e921021f3c8d2037915b5e87207bf3b7",
+  "imageConfigID": "sha256:5f3995e324aca16af0b56a307381c2668428102b0674837982fb1497f1516b87",
+  "buildManifestDigest": "sha256:682636d7d026448985ff6cb5ae09208a6c9751f97d242346ac93739609c81ce0",
+  "buildLogSHA256": "5f51f27f507521dc7ab77e97de3de881822be810c9dce1d7333a2d35cdbef86d",
+  "smokeLogSHA256": "ce861a19a403c0d32690b2127f12bde3d3fc27e0d9931fa201c28837a23f6a9a",
+  "scanSummarySHA256": "935f5fa7ef5dd0c16c6ccab810673954e0772b12d6b18ffc21b61031d1d7b727",
+  "rawReportSHA256": "cb92b31685342d5e94a9bd35abcc7dc18b2c12cc6835ad905c9ee23935f82f1d",
+  "rawSBOMSHA256": "764c26a555741734b56d00772ce34b7a0da60c6aa801af9440d6b3f6c50d657e",
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "grypeVersion": "0.120.1",
+  "syftVersion": "1.54.1",
+  "scope": "squashed",
+  "userIgnoreRules": [],
+  "effectiveDefaultKernelHeaderRules": [
+    {
+      "name": "kernel-headers",
+      "version": "",
+      "language": "",
+      "type": "rpm",
+      "location": "",
+      "upstream-name": "kernel"
+    },
+    {
+      "name": "linux(-.*)?-headers-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    },
+    {
+      "name": "linux-libc-dev",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux"
+    },
+    {
+      "name": "linux-kbuild-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    }
+  ],
+  "ignoredMatchCount": 0,
+  "matchesBySeverity": {
+    "Critical": 24,
+    "High": 98,
+    "Medium": 68,
+    "Low": 10,
+    "Negligible": 95,
+    "Unknown": 1
+  },
+  "criticalGateExitCode": 2,
+  "criticalGatePassed": false,
+  "criticalAdvisories": [
+    {
+      "id": "CVE-2026-19931",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-11856",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-8924",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-10536",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-9079",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-9079",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-18924",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-8927",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    },
+    {
+      "id": "CVE-2026-8926",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-8926",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      },
+      "packageMatchCount": 3
+    }
+  ],
+  "curlBuild": {
+    "version": "8.22.0",
+    "packageVersion": "8.22.0-operator1",
+    "releaseSignerFingerprint": "27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2",
+    "assets": {
+      "source": {
+        "url": "https://curl.se/download/curl-8.22.0.tar.xz",
+        "sha256": "f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7"
+      },
+      "signature": {
+        "url": "https://curl.se/download/curl-8.22.0.tar.xz.asc",
+        "sha256": "ff9acdd6e48690d037b85337e42320b87aead3414ba83b75e77ec08d2eea908e"
+      },
+      "signer": {
+        "url": "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x27edeaf22f3abceb50db9a125cc908fdb71e12c2",
+        "sha256": "a02c65495a46ce084162aa2143ebc588a136798ece5089ea85dce1d0691c87ef"
+      }
+    },
+    "sourceModified": false,
+    "disputedAmbientUserAdvisoryResolved": false,
+    "cliTLSBackend": "gnutls",
+    "variants": {
+      "openssl": {
+        "libraryPath": "/usr/lib/aarch64-linux-gnu/libcurl.so.4.8.0",
+        "librarySHA256": "830ac9925b60b4026bb8958c3db77a6d46721aac9a965f531aeee78627759456",
+        "soname": "libcurl.so.4",
+        "previousExportedSymbolsPreserved": 96,
+        "configure": [
+          "configure",
+          "--prefix=/usr",
+          "--libdir=/usr/lib/aarch64-linux-gnu",
+          "--enable-shared",
+          "--disable-static",
+          "--enable-versioned-symbols",
+          "--enable-symbol-hiding",
+          "--enable-ntlm",
+          "--enable-smb",
+          "--with-ca-bundle=/etc/ssl/certs/ca-certificates.crt",
+          "--with-ca-path=/etc/ssl/certs",
+          "--with-gssapi",
+          "--with-libssh2",
+          "--with-nghttp2",
+          "--with-libidn2",
+          "--with-brotli",
+          "--with-zstd",
+          "--with-zlib",
+          "--with-libpsl",
+          "--with-openssl"
+        ],
+        "symbolNamespace": "CURL_OPENSSL_4",
+        "generatedSymbolNamespaceAdjusted": false,
+        "configSHA256": "fa2f7f792fb166a109693baf3ff7fcde20ea6acf3563e99322533d5c52095af8"
+      },
+      "gnutls": {
+        "libraryPath": "/usr/lib/aarch64-linux-gnu/libcurl-gnutls.so.4.8.0",
+        "librarySHA256": "4a5dc58e72a6f59f75bbea4228bc66de64a044dac3aaaaf375ca940eb943f4ef",
+        "soname": "libcurl-gnutls.so.4",
+        "previousExportedSymbolsPreserved": 96,
+        "configure": [
+          "configure",
+          "--prefix=/usr",
+          "--libdir=/usr/lib/aarch64-linux-gnu",
+          "--enable-shared",
+          "--disable-static",
+          "--enable-versioned-symbols",
+          "--enable-symbol-hiding",
+          "--enable-ntlm",
+          "--enable-smb",
+          "--with-ca-bundle=/etc/ssl/certs/ca-certificates.crt",
+          "--with-ca-path=/etc/ssl/certs",
+          "--with-gssapi",
+          "--with-libssh2",
+          "--with-nghttp2",
+          "--with-libidn2",
+          "--with-brotli",
+          "--with-zstd",
+          "--with-zlib",
+          "--with-libpsl",
+          "--with-gnutls",
+          "--with-ngtcp2",
+          "--with-nghttp3"
+        ],
+        "symbolNamespace": "CURL_GNUTLS_3",
+        "generatedSymbolNamespaceAdjusted": true,
+        "configSHA256": "0fda84fe752aac9775da3d6b3c2e798df86d7efe6974c6daa92f8f7b2e7ba456"
+      }
+    },
+    "cliSHA256": "2eaa22f6957befaa3e037dba977e35afc56620e9e8cfad2464b29612b0d947a4"
+  },
+  "originalUpstreamLicenseSHA256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681",
+  "arm64NativeFullSmokePassed": true,
+  "amd64NativeFullSmokePassed": false,
+  "amd64HardwareCIPending": true,
+  "baselineProbes": {
+    "imageEvidence": "openssh-runtime-smoke.json",
+    "rawLogSHA256": "c9e080fb9671f9266977ffa32fd3c69339dc981dc692df6ca49f01a0b0a9fff9",
+    "fixtureSHA256": "09855b8c58d35b9893bbd645efad2152c1fc3266f53b309e25537442bbb45842",
+    "exitCode": 1,
+    "reproduced": [
+      "CVE-2026-9079 proxy credential clearing, both variants",
+      "CVE-2026-8926 mismatched netrc user, both variants"
+    ],
+    "syntheticCredentialsOnly": true
+  },
+  "sbomArtifactCount": 280,
+  "curlInventory": [
+    {
+      "name": "curl",
+      "version": "8.22.0-operator1",
+      "type": "deb",
+      "purl": "pkg:deb/debian/curl@8.22.0-operator1?arch=arm64&distro=debian-13.7&upstream=curl"
+    },
+    {
+      "name": "libcurl3t64-gnutls",
+      "version": "8.22.0-operator1",
+      "type": "deb",
+      "purl": "pkg:deb/debian/libcurl3t64-gnutls@8.22.0-operator1?arch=arm64&distro=debian-13.7&upstream=curl"
+    },
+    {
+      "name": "libcurl4t64",
+      "version": "8.22.0-operator1",
+      "type": "deb",
+      "purl": "pkg:deb/debian/libcurl4t64@8.22.0-operator1?arch=arm64&distro=debian-13.7&upstream=curl"
+    }
+  ],
+  "compatibility": {
+    "previousVersionedExportsPreserved": true,
+    "cliTLSBackendChangedTo": "GnuTLS",
+    "upstreamRemovedFeatures": [
+      "OpenSSL-QUIC",
+      "RTMP",
+      "TLS-SRP"
+    ],
+    "HTTP3Available": true,
+    "SMBAndNTLMExplicitlyRetained": true,
+    "remoteVendorGitTested": false,
+    "KerberosIdentitySwitchTested": false,
+    "ambientUserAdvisoryResolved": false
+  },
+  "releaseApproved": false,
+  "published": false,
+  "vendorAcceptancePassed": false,
+  "targetNodeCPUAcceptance": false,
+  "localVerification": {
+    "makeVerify": true,
+    "makeTestAPI": "1.33.0",
+    "makeVerifyLogSHA256": "9c49e28ee1373f18d4958b8ebe0c8654fb31649b06be20b67b8fd4d767b2dcb9",
+    "integrationLogSHA256": "39313952a3de2cc9092be3506d9d21f100cab23c010742ad14b177bfb903ef08",
+    "pythonTestCount": 14,
+    "actionlint": true,
+    "wikiValidation": true,
+    "gitleaks": {
+      "exitCode": 1,
+      "findingCount": 4,
+      "reviewedFalsePositiveCount": 4,
+      "unresolvedFindingCount": 0,
+      "newIgnoreRules": false,
+      "classification": "unchanged public OpenSSH signer/archive/binary hashes, independently matched to prior evidence",
+      "redactedReportSHA256": "252af705dc8deb7b2505ef6593ee65a8d07bbb3ff5b77d946c352e45487a7284"
+    }
+  }
+}

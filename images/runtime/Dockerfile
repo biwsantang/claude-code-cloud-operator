@@ -21,8 +21,19 @@ FROM tools-base AS openssh
 RUN apt-get install -y --no-install-recommends build-essential pkg-config libssl-dev zlib1g-dev libedit-dev libfido2-dev libkrb5-dev gnupg gpgv openssh-client
 COPY images/runtime/build-openssh.py /tmp/build-openssh.py
 RUN python3 /tmp/build-openssh.py
+FROM tools-base AS curl-build
+RUN apt-get install -y --no-install-recommends build-essential pkg-config patchelf gnupg gpgv \
+    libssl-dev libgnutls28-dev libkrb5-dev libssh2-1-dev libnghttp2-dev libngtcp2-dev libngtcp2-crypto-gnutls-dev libnghttp3-dev \
+    libidn2-dev libbrotli-dev libzstd-dev zlib1g-dev libpsl-dev libldap2-dev
+COPY images/runtime/build-curl.py /tmp/build-curl.py
+RUN python3 /tmp/build-curl.py
 FROM tools-base AS tools
 COPY --from=openssh /opt/openssh-client/ /
+COPY --from=curl-build /opt/curl-packages/ /tmp/curl-packages/
+RUN dpkg -i /tmp/curl-packages/*.deb && ldconfig && \
+    mkdir -p /usr/local/share/claude-runtime && \
+    mv /tmp/curl-packages/curl-build.json /usr/local/share/claude-runtime/curl-build.json && \
+    rm -r /tmp/curl-packages
 COPY images/runtime/install-npm.sh /tmp/install-npm.sh
 COPY images/runtime/install-npm-overrides.py /tmp/install-npm-overrides.py
 RUN sh /tmp/install-npm.sh && python3 /tmp/install-npm-overrides.py && \

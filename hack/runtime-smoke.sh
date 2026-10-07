@@ -12,6 +12,7 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
   --mount "type=bind,src=$checks_dir/npm-security-smoke.cjs,dst=/checks/npm-security-smoke.cjs,readonly" \
   --mount "type=bind,src=$checks_dir/runtime-python-smoke.py,dst=/checks/runtime-python-smoke.py,readonly" \
   --mount "type=bind,src=$checks_dir/runtime-ssh-smoke.py,dst=/checks/runtime-ssh-smoke.py,readonly" \
+  --mount "type=bind,src=$checks_dir/runtime-curl-smoke.py,dst=/checks/runtime-curl-smoke.py,readonly" \
   --tmpfs /tmp:rw,nosuid,nodev,size=64m \
   --tmpfs /home/runner:rw,nosuid,nodev,size=64m,uid=1000,gid=1000 \
   "$image" -c '
@@ -33,6 +34,7 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     ssh -V
     python3 /checks/runtime-python-smoke.py
     python3 /checks/runtime-ssh-smoke.py
+    python3 /checks/runtime-curl-smoke.py
     node /checks/npm-security-smoke.cjs
     claude self-hosted-runner --help > /tmp/runner-help
     claude self-hosted-runner orchestrator --help > /tmp/orchestrator-help

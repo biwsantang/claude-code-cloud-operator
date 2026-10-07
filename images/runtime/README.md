@@ -19,6 +19,14 @@ GSSAPIKeyExchange extension is not. Source/binary pins are recorded in
 [runtime evidence and compatibility limits](../../wiki/testing/runtime-vulnerability-review.md)
 before accepting this upstream client revision.
 
+Curl and both libcurl variants use verified upstream 8.22.0 source, packaged privately as
+`8.22.0-operator1`, not official Debian releases. Every prior versioned export must remain; Debian's
+GnuTLS namespace and SONAME are retained for Git compatibility. The CLI uses GnuTLS to retain HTTP/3;
+upstream removed OpenSSL-QUIC, RTMP and TLS-SRP. Original licenses and a source/binary build record
+are retained at `/usr/local/share/claude-runtime/curl-build.json`. Real credential-boundary probes and
+offline Git HTTPS smoke support this update, but the Critical scan gate still fails. CI retains private
+SBOM/scan metadata and enforces that threshold; it never publishes the image.
+
 No vendor runtime image is published by CI. The operator's Apache-2.0 license does not license the vendor binary.
 Redistribution approval and dedicated vendor/network E2E remain release gates. Native registration must use the
 per-order credential; never bake an environment key, API key, OAuth login or cloud identity into this image.

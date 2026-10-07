@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:04:52+07:00"
+  at: "2026-10-07T18:30:01+07:00"
 ---
 
 # Implementation evidence
@@ -304,6 +304,23 @@ for exact source f261cc1, including all SSH/SDK checks. Task 5.1 is restored; th
 an ARM64 container rescan, and no AMD64 scan clearance is claimed.
 Local `make verify` and the real Kubernetes 1.33.0 API-server suite pass. No release or vendor acceptance
 is inferred from these results.
+
+## curl/libcurl and native scan revision
+
+The [runtime review](runtime-vulnerability-review.md) and [candidate evidence](evidence/curl-runtime-smoke.json)
+record signature/checksum-verified curl 8.22.0, private versioned packages, original license bytes and
+preserved OpenSSL/GnuTLS exported ABI symbols. Debian's GnuTLS namespace/SONAME are explicitly retained.
+The GnuTLS CLI preserves HTTP/3; upstream protocol removals and TLS-backend changes remain compatibility
+concerns. Both old variants reproduce proxy-credential clearing/netrc user leakage, and both new variants
+pass the same real API probes with positive controls. Native ARM64 restricted SDK smoke passes actual
+CLI/library CA trust/rejection and Git HTTPS clone/commit/push in an offline disposable container fixture.
+No real vendor Git or Kerberos identity switching is tested. Native AMD64 verification remains pending.
+
+Syft identifies all three custom 8.22.0-operator1 packages, but Grype's Debian `wont-fix` records still
+produce 24 Critical matches with zero ignored matches and exit 2. There is no automatic VEX/waiver or
+ambient-user advisory resolution. CI now downloads pinned scanner tools, enforces that threshold and
+retains only private JSON review metadata, not images/binaries. SDK execution and scan outcomes remain
+separate evidence; task 5.1 is reopened and task 7.3 stays pending.
 
 ## External gates
 

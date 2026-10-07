@@ -15,6 +15,17 @@ jobs:
     # Private, disposable build only: no registry login, image upload, vendor credential or publication.
     - run: docker build --platform linux/amd64 -f images/runtime/Dockerfile -t claude-cloud-runtime:ci .
     - run: sh hack/runtime-smoke.sh claude-cloud-runtime:ci linux/amd64
+    - name: Retain SBOM and enforce runtime Critical threshold
+      id: scan
+      run: python3 hack/runtime-scan.py --image claude-cloud-runtime:ci --output "$RUNNER_TEMP/runtime-scan"
+    # Private review metadata only; no binaries, image layers or vendor credentials are uploaded.
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      if: ${{ always() && !cancelled() && steps.scan.outcome != 'skipped' }}
+      with:
+        name: runtime-amd64-inventory
+        path: ${{ runner.temp }}/runtime-scan/*.json
+        retention-days: 7
+        if-no-files-found: error
   unit:
     runs-on: ubuntu-latest
     steps:
