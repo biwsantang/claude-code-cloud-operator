@@ -15,6 +15,9 @@ jobs:
       with:
         go-version-file: go.mod
     - run: go mod verify && go test -race ./... && go vet ./...
+    - run: python3 -m unittest discover -s hack -p 'test_candidate.py'
+      env:
+        PYTHONDONTWRITEBYTECODE: '1'
     - run: go install sigs.k8s.io/kustomize/kustomize/v5@v5.8.1
     - run: make generate package && git diff --exit-code
     - run: |
@@ -37,3 +40,25 @@ jobs:
     - run: go test -race -tags=integration ./internal/controller -v -count=1 -timeout=5m
       env:
         ENVTEST_VERSION: ${{ matrix.kubernetes }}
+  vulnerability:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture: ['amd64', 'arm64']
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
+      with:
+        go-version-file: go.mod
+    - run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+      env:
+        GOTOOLCHAIN: local
+    # Text mode fails on findings; JSON/SARIF exit zero even when vulnerabilities exist.
+    - run: govulncheck ./cmd ./cmd/spawn-runner
+      env:
+        GOTOOLCHAIN: local
+        CGO_ENABLED: '0'
+        GOOS: linux
+        GOARCH: ${{ matrix.architecture }}

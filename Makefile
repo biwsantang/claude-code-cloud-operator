@@ -3,7 +3,7 @@ CONTROLLER_GEN := $(CURDIR)/bin/controller-gen
 CONTROLLER_TOOLS_VERSION := v0.22.0
 ENVTEST_VERSION ?= 1.33.0
 TEST_IMAGE := golang:1.27.1-bookworm@sha256:8d48e12ec56735e9358640898b9d9b9fcca110612ed8a5567438c0a1baa24e66
-.PHONY: test test-api generate manifests package build verify
+.PHONY: test test-api test-candidate generate manifests package build verify
 $(CONTROLLER_GEN):
 	mkdir -p $(CURDIR)/bin
 	GOBIN=$(CURDIR)/bin $(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
@@ -15,6 +15,8 @@ package: manifests
 	python3 hack/package.py
 test:
 	$(GO) test -race ./...
+test-candidate:
+	PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s hack -p 'test_candidate.py'
 test-api:
 	@if [ "$$(uname -s)" = Darwin ]; then \
 	 docker run --rm --mount type=bind,src="$(CURDIR)",dst=/workspace \
@@ -26,6 +28,6 @@ test-api:
 build:
 	$(GO) build -o bin/manager ./cmd
 	$(GO) build -o bin/spawn-runner ./cmd/spawn-runner
-verify: generate package test
+verify: generate package test test-candidate
 	$(GO) vet ./...
 	$(GO) mod verify

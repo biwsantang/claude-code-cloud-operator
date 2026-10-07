@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T15:23:00+07:00"
 ---
 
 # Contributor workflow
@@ -18,5 +18,7 @@ generated:
 5. Archive completed change records through Code Wiki, preserving history.
 
 Keep research links and source timestamps current when beta contracts change. Avoid claims that this independent
-operator is vendor-supported. A future CI pipeline should validate wiki links, generated CRDs, Go tests,
-RBAC, images and install artifacts. Do not grant cloud publishing credentials to documentation checks.
+operator is vendor-supported. CI verifies generated parity, Go/API tests, architecture builds and known
+reachable Go vulnerabilities. [Private candidate verification](release-candidates.md) adds compiled-binary
+SBOMs, artifact inventory and signature/tamper checks. Image publishing and production signing are separate.
+Do not grant cloud publishing credentials to documentation checks.
