@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T16:37:11+07:00"
+  at: "2026-10-07T16:42:40+07:00"
 ---
 
 # Implementation evidence
@@ -253,7 +253,8 @@ record actual Grype 0.120.1 scans without suppression. The prior ARM64 manager/h
 Both updated runtime architectures retain 27 Critical matches covering 10 advisory IDs. A checksum-pinned npm
 11.21.0 update removes four High/five Medium matches, but three fixable High bundled-dependency matches remain.
 Native ARM64 read-only/offline toolchain smoke passes; the AMD64 build and scan pass, while local QEMU execution
-fails. Matching-hardware CI is now added and pending. Task 5.1 is reopened for that changed-image verification;
+fails. [Native AMD64 CI](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37602263943) now passes
+the same full toolchain/CLI flag/offline npm smoke as native ARM64. Task 5.1 is restored after changed-image verification;
 no vulnerability waiver, production signature, vendor session or release publication is claimed.
 
 `make verify` and the real 1.33.0 API suite pass after the SDK/smoke/CI change. Successful code tests do not clear

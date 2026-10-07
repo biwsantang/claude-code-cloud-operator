@@ -404,11 +404,11 @@
   "npmVersion": "11.21.0",
   "npmArchiveSHA512": "668bfc2a16a63677a22dd10bb63e5800bb4d9895b82f87c22d3ce37e9cd71b6c3a3121dc7f453181d94ae6e9680ae92c593fbb986514ef08bbf5c3ba46a8af3e",
   "arm64NativeOfflineToolchainSmokePassed": true,
-  "amd64NativeExecutionVerified": false,
+  "amd64NativeExecutionVerified": true,
   "amd64EmulatedNpmExitCode": 139,
   "amd64NativeCLIQemuCrashAndHang": true,
   "amd64ProbeContainerStopped": true,
-  "matchingHardwareCISmokePending": true,
+  "matchingHardwareCISmokePending": false,
   "vendorAcceptancePassed": false,
   "releaseApproved": false,
   "published": false,
@@ -419,5 +419,23 @@
     "passed": true,
     "scope": "CLI version and offline npm fixture; restored CLI flag assertions await next CI run"
   },
-  "arm64CLIFlagsAndOfflineToolchainSmokePassed": true
+  "arm64CLIFlagsAndOfflineToolchainSmokePassed": true,
+  "matchingHardwareCISmoke": {
+    "sourceCommit": "a87159be28640bce58f54f11d4dce49139467668",
+    "runURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37602263943",
+    "job": {
+      "completedAt": "2026-10-07T09:41:29Z",
+      "conclusion": "success",
+      "databaseId": 112729227257,
+      "name": "runtime-amd64",
+      "startedAt": "2026-10-07T09:40:47Z",
+      "status": "completed",
+      "url": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37602263943/job/112729227257"
+    },
+    "scope": "pinned native CLI version, required runner/orchestrator flags, non-root/read-only/network-none posture and synthetic offline npm pack/install/execute",
+    "productionCPUAcceptance": false,
+    "vendorRegistration": false,
+    "jobLogSHA256": "f4fafe7d4c913636ffafced3e78bf23466be0bde0ea04b97095ea29f9c262ce5"
+  },
+  "arm64FullSmokeLogSHA256": "aa0a4b9a7a342a5d246f48633f3785eca0eff8f559764bae7676e4539fc64eaf"
 }
