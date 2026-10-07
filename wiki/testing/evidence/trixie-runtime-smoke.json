@@ -746,18 +746,36 @@
       }
     ]
   },
-  "amd64NativeFullSmokePassed": false,
-  "amd64HardwareCIPending": true,
+  "amd64NativeFullSmokePassed": true,
+  "amd64HardwareCIPending": false,
   "localVerification": {
     "makeVerify": true,
     "makeTestAPI": "1.33.0",
     "makeVerifyLogSHA256": "c3faa287c75ac609d52d4d9d80708e2a2ade28735911fe6320c189cccd879080",
     "integrationLogSHA256": "0c70449b1402dd9426ee7a6e294258b58a928eb81ab8f1034474b87f0da52390",
     "pythonTestCount": 14,
-    "actionlint": true
+    "actionlint": true,
+    "wikiPagesValidated": 20,
+    "redactedSecretScan": true
   },
   "releaseApproved": false,
   "vendorAcceptancePassed": false,
   "targetNodeCPUAcceptance": false,
-  "published": false
+  "published": false,
+  "amd64HardwareCI": {
+    "sourceCommit": "4ed9067dbf0c263e00845c0e94f46da9d8e6a25e",
+    "runURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37607651747",
+    "job": {
+      "id": 112746981191,
+      "name": "runtime-amd64",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-07T10:28:45Z",
+      "completed_at": "2026-10-07T10:29:32Z",
+      "html_url": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37607651747/job/112746981191"
+    },
+    "jobLogSHA256": "c7b90e664493374fb871a8a48049a94fd3d22e426ba903bd181f2df31f375807",
+    "vendorRegistration": false,
+    "targetNodeCPUAcceptance": false
+  }
 }

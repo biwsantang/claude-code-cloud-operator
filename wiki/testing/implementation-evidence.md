@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:28:00+07:00"
+  at: "2026-10-07T17:31:22+07:00"
 ---
 
 # Implementation evidence
@@ -284,8 +284,9 @@ one Unknown match. Eight prior Python/glibc/SQLite Critical package matches disa
 are added for two newer-version advisory ranges. No user ignore rules or ignored matches are present;
 the effective Grype configuration retains its default kernel-header exclusions. The Critical gate still fails.
 A separately hashed Syft catalogue identifies the upstream Python binary and actual package versions.
-`make verify` and the 1.33.0 API suite pass. Matching native AMD64 CI is pending; task 5.1 is reopened
-for this revision. No source tests or smaller scanner count substitute for that execution check or release acceptance.
+`make verify` and the 1.33.0 API suite pass. [Matching native AMD64 CI passes](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37607651747/job/112746981191)
+for source 4ed9067, including Python venv/offline pip and all prior CLI/npm probes. Task 5.1 is restored
+for this revision. No source tests or smaller scanner count substitute for release acceptance.
 
 ## External gates
 
