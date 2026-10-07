@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "managerImage": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$",
+      "description": "A verified manager image digest"
+    }
+  },
+  "required": ["managerImage"]
+}

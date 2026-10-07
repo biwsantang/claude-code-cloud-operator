@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:02:48+07:00"
+  at: "2026-10-07T11:59:38+07:00"
 ---
 
 # Integrations
@@ -20,3 +20,5 @@ operations and private service authorization remain downstream responsibilities.
 
 [Existing operator alternatives](existing-projects.md) compares primary upstream documentation and defines
 the adoption gate before a new controller is scaffolded.
+
+[Operator practices and community lessons](operator-practices.md) maps primary guidance to implementation checks.

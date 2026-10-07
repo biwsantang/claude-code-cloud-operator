@@ -1,0 +1,7 @@
+apiVersion: v2
+name: claude-code-cloud-operator
+description: Namespace-scoped Claude Code Fleet and durable WorkOrder operator
+type: application
+version: 0.1.0
+appVersion: 0.1.0-dev
+kubeVersion: '>=1.33.0-0'

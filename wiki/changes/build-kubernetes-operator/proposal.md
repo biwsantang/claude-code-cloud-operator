@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:02:48+07:00"
+  at: "2026-10-07T11:59:38+07:00"
 ---
 
 # Build a Kubernetes operator
@@ -51,7 +51,7 @@ The name does not promise a self-hosted Anthropic control plane or Claude UI.
 ## Impact
 
 - APIs: two proposed `v1alpha1` CRDs with status subresources; alpha compatibility may change before release.
-- Code: new Go controller project and hook adapter; no application implementation in this change.
+- Code: new Go controller project and hook adapter; the selected independent implementation is now being applied against the acceptance tasks.
 - Dependencies: controller-runtime/Kubebuilder and the vendor CLI; exact supported versions remain to be pinned.
 - Risks: lost launches after uncertain writes, incomplete network validation, credential visibility to administrators,
   beta protocol changes, drain delays and unpushed work loss on infrastructure failure.

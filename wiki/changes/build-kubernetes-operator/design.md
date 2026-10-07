@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:03:43+07:00"
+  at: "2026-10-07T11:59:38+07:00"
 sources:
   - resource: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/"
   - resource: "https://book.kubebuilder.io/reference/good-practices"
@@ -15,7 +15,8 @@ sources:
 
 # Operator design
 
-All decisions below are proposed. No runtime or CRDs exist yet.
+This remains the proposed acceptance contract. A Go implementation candidate, generated CRDs and
+packaging now exist. See the [evidence ledger](../../testing/implementation-evidence.md) for verified behavior and limits.
 
 ## 1. Supported integration boundary
 

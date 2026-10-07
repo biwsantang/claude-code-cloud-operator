@@ -1,0 +1,2 @@
+# Build and verify the manager, then provide its registry digest. No default release is published yet.
+managerImage: ""

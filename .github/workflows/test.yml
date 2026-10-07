@@ -1,0 +1,39 @@
+name: Verify operator
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
+      with:
+        go-version-file: go.mod
+    - run: go mod verify && go test -race ./... && go vet ./...
+    - run: go install sigs.k8s.io/kustomize/kustomize/v5@v5.8.1
+    - run: make generate package && git diff --exit-code
+    - run: |
+        for arch in amd64 arm64; do
+          CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -o /tmp/manager-$arch ./cmd
+          CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -o /tmp/hook-$arch ./cmd/spawn-runner
+        done
+  api:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubernetes: ['1.33.0', '1.37.0']
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
+      with:
+        go-version-file: go.mod
+    - run: go test -race -tags=integration ./internal/controller -v -count=1 -timeout=5m
+      env:
+        ENVTEST_VERSION: ${{ matrix.kubernetes }}

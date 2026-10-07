@@ -6,12 +6,12 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:02:48+07:00"
+  at: "2026-10-07T11:59:38+07:00"
 ---
 
 # Documentation map
 
-This repository has no running operator yet. Read in this order:
+The implementation candidate is under active verification. Read in this order:
 
 1. [Research and source ledger](integrations/anthropic-contract.md): verified external contracts and unknowns.
 2. [Existing projects](integrations/existing-projects.md): choose adoption, fork or independent implementation.
@@ -24,5 +24,8 @@ Supporting pages: [architecture](architecture/index.md), [terminology](concepts/
 [operations](operations/index.md), [test strategy](testing/index.md),
 and [contributor workflow](workflows/index.md).
 
-Next action is **apply `build-kubernetes-operator`** after reviewing the decisions and open questions.
-Do not deploy or replace an existing fleet from these planning documents.
+The active change is **apply `build-kubernetes-operator`**.
+Review [implementation evidence](testing/implementation-evidence.md) and the
+[installation/drain guide](operations/install-and-drain.md). Production rollout remains gated.
+
+- [Operator practices and community lessons](integrations/operator-practices.md)

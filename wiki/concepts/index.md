@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:00:24+07:00"
+  at: "2026-10-07T11:59:38+07:00"
 ---
 
 # Core concepts
