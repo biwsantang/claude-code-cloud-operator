@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T22:00:09+07:00"
+  at: "2026-10-07T23:38:28+07:00"
 ---
 
 # Implementation evidence
@@ -387,3 +387,18 @@ Local QEMU AMD64 build fails in Python package installation; native AMD64 checks
 Security smoke correctly fails netrc credential isolation in both installed libcurl variants and the
 upstream npm brace recursion regression. The [runtime review](runtime-vulnerability-review.md) reports
 scan results and scanner defaults separately. No deployment, publication or vendor acceptance is inferred.
+
+## Ubuntu 26.04 and narrow npm fix revision
+
+The current runtime moves to the digest-pinned Ubuntu 26.04 devcontainer base and distro Python 3.14.
+Two verified upstream npm dependencies are temporarily overridden; curl/OpenSSH remain distro packages.
+Native ARM64 functional and full security smoke pass. The Ubuntu 24.04 candidate still reproduces
+credential/recursion/WebSocket failures under the expanded suite, which continues after a failed group.
+The cache review uses the installed npm caller and a real offline HTTP/cache fixture; its default
+private policy, no-store, Set-Cookie omission and distinct cache paths pass. The underlying library
+advisory remains visible and no scanner exception is introduced. See the [runtime review](runtime-vulnerability-review.md)
+for the scope/conditions. The final ARM64 scan passes the Critical gate with 1 High cache advisory,
+617 Medium, 87 Low and 6 Negligible matches; 3560 standard kernel-header matches are filtered.
+The unused inherited Pebble supervisor was removed, eliminating its four High Go-stdlib matches.
+`make verify`, the real Kubernetes 1.33 API suite, four override archive tests, actionlint, shell syntax
+and wiki metadata/local links pass. Native AMD64 remains pending CI for this revision.

@@ -413,12 +413,22 @@ def main():
         assert "https" in version.split("Protocols:", 1)[1].splitlines()[0].split()
     with tempfile.TemporaryDirectory(prefix="curl-sdk-") as directory:
         root = Path(directory)
+        probes = []
         if not boundary_only and not sdk_only:
-            credential_probes(paths, root)
+            probes.append(("proxy/netrc credentials", lambda: credential_probes(paths, root)))
         if not sdk_only:
-            boundary_probes(paths, root)
+            probes.append(("Digest/cookie boundaries", lambda: boundary_probes(paths, root)))
         if not security_only and not boundary_only:
-            https_git(paths, root)
+            probes.append(("TLS/Git SDK", lambda: https_git(paths, root)))
+        failures = []
+        for name, probe in probes:
+            try:
+                probe()
+            except Exception as error:
+                failures.append(f"{name}: {error}")
+                print(f"FAIL: {name}: {error}", file=sys.stderr)
+        if failures:
+            raise AssertionError("; ".join(failures))
 
 
 if __name__ == "__main__":

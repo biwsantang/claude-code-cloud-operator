@@ -19,7 +19,7 @@ import zlib
 
 
 def main():
-    assert sys.version_info[:2] == (3, 12), sys.version
+    assert sys.version_info[:2] == (3, 14), sys.version
     assert ssl.create_default_context().cert_store_stats()["x509_ca"] > 0
     assert ctypes.CDLL(None).getpid() > 0
     data = b"synthetic-runtime-sdk" * 100

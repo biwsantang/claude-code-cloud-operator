@@ -6,6 +6,7 @@ on:
     - 'images/runtime/**'
     - 'hack/runtime-*'
     - 'hack/npm-security-smoke.cjs'
+    - 'hack/test_npm_overrides.py'
     - '.github/workflows/runtime.yml'
     - '.dockerignore'
   push:
@@ -14,6 +15,7 @@ on:
     - 'images/runtime/**'
     - 'hack/runtime-*'
     - 'hack/npm-security-smoke.cjs'
+    - 'hack/test_npm_overrides.py'
     - '.github/workflows/runtime.yml'
     - '.dockerignore'
 permissions:
@@ -29,6 +31,8 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       with:
         persist-credentials: false
+    - name: Verify override archive boundaries
+      run: PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s hack -p 'test_npm_overrides.py'
     # Private, disposable build only: no registry login, image upload, vendor credential or publication.
     - name: Build maintained-base runtime
       id: build

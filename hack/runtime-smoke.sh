@@ -12,6 +12,7 @@ checks_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges --entrypoint /bin/sh \
   --mount "type=bind,src=$checks_dir/npm-security-smoke.cjs,dst=/checks/npm-security-smoke.cjs,readonly" \
+  --mount "type=bind,src=$checks_dir/runtime-npm-cache-smoke.cjs,dst=/checks/runtime-npm-cache-smoke.cjs,readonly" \
   --mount "type=bind,src=$checks_dir/runtime-python-smoke.py,dst=/checks/runtime-python-smoke.py,readonly" \
   --mount "type=bind,src=$checks_dir/runtime-ssh-smoke.py,dst=/checks/runtime-ssh-smoke.py,readonly" \
   --mount "type=bind,src=$checks_dir/runtime-curl-smoke.py,dst=/checks/runtime-curl-smoke.py,readonly" \
@@ -24,9 +25,11 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
     test "$DISABLE_UPDATES" = 1
     test "$SELF_HOSTED_RUNNER_HOST_CONFIG_DIR" = /etc/claude
     test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
+    test ! -e /usr/bin/pebble
     test "$(node --version)" = v24.21.0
     test "$(npm --version)" = 11.21.0
     test "$(npx --version)" = 11.21.0
+    test "$(npm config get cache)" = /home/runner/.npm
     test "$(yarn --version)" = 1.22.22
     test "$(getent passwd 1000 | cut -d: -f1)" = runner
     test "$(getent passwd 1000 | cut -d: -f6)" = /home/runner
@@ -35,6 +38,7 @@ docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL
       result=0
       python3 /checks/runtime-curl-smoke.py --security-only || result=1
       node /checks/npm-security-smoke.cjs || result=1
+      node /checks/runtime-npm-cache-smoke.cjs || result=1
       exit "$result"
     fi
     test "$(claude --version)" = "2.1.285 (Claude Code)"

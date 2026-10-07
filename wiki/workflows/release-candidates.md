@@ -6,7 +6,7 @@ tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T22:00:09+07:00"
+  at: "2026-10-07T23:30:47+07:00"
 sources:
   - resource: repo://.github/workflows/release.yml
   - resource: repo://.github/workflows/test.yml
@@ -68,8 +68,9 @@ and private-repository feature availability first. No runtime process should own
 ## Runtime and installation
 
 Administrators provide a separately accepted runtime image for both orchestrator and session runners.
-The optional [runtime candidate](../../images/runtime/README.md) uses a maintained Ubuntu devcontainer base and distro curl/OpenSSH. It remains
-unapproved because security regression probes fail; a Critical-only scan pass does not approve it.
+The optional [runtime candidate](../../images/runtime/README.md) uses a maintained Ubuntu 26.04 devcontainer base and distro curl/OpenSSH,
+with two temporary upstream npm dependency overrides. Native ARM64 security probes pass; runtime
+acceptance still requires reviewed inventories, native AMD64 and real Claude/network acceptance.
 A compatible accepted image can be supplied without rebuilding the operator.
 
 The environment credential is an existing namespace Secret. cert-manager handles admission TLS. New

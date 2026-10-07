@@ -9,10 +9,32 @@ const { WebSocket, request } = require(root + 'undici');
 
 console.log('npm bundle:', { braceExpansion: require(root + 'brace-expansion/package.json').version,
   undici: require(root + 'undici/package.json').version });
-assert.deepEqual(expand('file-{a,b}-{1..2}'), ['file-a-1', 'file-a-2', 'file-b-1', 'file-b-2']);
-// GHSA-6j4f-fj2g-mc7p: parse-side recursion; GHSA-qhr7-859c-m2p7: nested expansion.
-for (const pattern of ['{' + '{a},'.repeat(7000) + 'b}', '{'.repeat(3200) + 'a,b' + '}'.repeat(3200)]) {
-  assert.doesNotThrow(() => expand(pattern, { max: 1, maxLength: 1 }));
+const probes = ['normal-braces', 'parse-recursion', 'nested-recursion', 'websocket'];
+const selected = process.argv[2];
+if (!selected) {
+  const { spawnSync } = require('node:child_process');
+  let failed = false;
+  for (const probe of probes) {
+    const result = spawnSync(process.execPath, [__filename, probe], { stdio: 'inherit', timeout: 15000 });
+    if (result.error || result.status !== 0) {
+      console.error('FAIL:', probe, result.error || result.signal || result.status);
+      failed = true;
+    }
+  }
+  process.exit(failed ? 1 : 0);
+}
+assert(probes.includes(selected), 'unknown security probe');
+if (selected !== 'websocket') {
+  if (selected === 'normal-braces') {
+    assert.deepEqual(expand('file-{a,b}-{1..2}'), ['file-a-1', 'file-a-2', 'file-b-1', 'file-b-2']);
+  } else {
+    // Each advisory runs in its own process so a crash cannot skip later probes.
+    const pattern = selected === 'parse-recursion' ? '{' + '{a},'.repeat(7000) + 'b}' :
+      '{'.repeat(3200) + 'a,b' + '}'.repeat(3200);
+    assert.doesNotThrow(() => expand(pattern, { max: 1, maxLength: 1 }));
+  }
+  console.log('PASS:', selected);
+  process.exit(0);
 }
 
 (async () => {
@@ -43,7 +65,7 @@ for (const pattern of ['{' + '{a},'.repeat(7000) + 'b}', '{'.repeat(3200) + 'a,b
     const result = await request('http://' + url, { headersTimeout: 5000, bodyTimeout: 5000 });
     assert.equal(result.statusCode, 200);
     assert.equal(await result.body.text(), 'synthetic-ok');
-    console.log('PASS: brace-expansion recursion and undici WebSocket rejection; HTTP client remains usable');
+    console.log('PASS: undici WebSocket rejection; HTTP client remains usable');
   } finally {
     for (const socket of sockets) socket.destroy();
     await new Promise(resolve => server.close(resolve));

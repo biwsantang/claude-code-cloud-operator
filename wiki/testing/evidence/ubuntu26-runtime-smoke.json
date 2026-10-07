@@ -1,0 +1,161 @@
+{
+  "recordedAt": "2026-10-07T16:38:28.509664+00:00",
+  "profile": "Ubuntu 26.04 devcontainer with distro curl/OpenSSH/Python and two temporary npm upstream overrides",
+  "sourceBaseCommit": "e7015930d7d1f3966ec160fb548c640b45959509",
+  "sourceDirty": true,
+  "platform": "linux/arm64",
+  "imageConfigID": "sha256:b6c8a2f610b3611cd5b2508a6e2772481a8fc10c3353c4ba59888f678cf30100",
+  "sourceSHA256": {
+    "images/runtime/Dockerfile": "d6e1edbf2cebf0d2faf315223f8aa611ec5031223e386d710a4379f8f853b044",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "images/runtime/install-npm-overrides.py": "67512f5c8370da38fd3db906dc62a3e7ad6646a74a85d49610c6395939aea792",
+    "hack/runtime-smoke.sh": "38f9452f230ce297f310aeb953958c9a91a5d4dc864ee055d1dd862e2e93f0bd",
+    "hack/runtime-curl-smoke.py": "ccd2e04626e378be572fc09bf9c97e89ea2906cec2e3c782fa79a0725cd9fbcd",
+    "hack/runtime-python-smoke.py": "f31e4f1324837c2ac1f6d2f1c317faa804b934f63f04d966998a7d6415bad880",
+    "hack/runtime-ssh-smoke.py": "57280b4b766d7d0949699b68fe8278985d7a9fab8dcb34727dc8c83dc008a43e",
+    "hack/npm-security-smoke.cjs": "62ee5655fd52fd0f0f40a19807e4bc68a0c09e8796a7d2f6af3998f9f0edd467",
+    "hack/runtime-npm-cache-smoke.cjs": "a2d0fff5f0e38a26926a69b98628d65fd9765202ab71afccf4025c381f964aa1"
+  },
+  "grypeVersion": "0.120.1",
+  "syftVersion": "1.54.1",
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "scope": "squashed",
+  "userIgnoreRules": [],
+  "effectiveDefaultKernelHeaderRules": [
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "kernel-headers",
+        "version": "",
+        "language": "",
+        "type": "rpm",
+        "location": "",
+        "upstream-name": "kernel"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux(-.*)?-headers-.*",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux.*"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux-libc-dev",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux-kbuild-.*",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux.*"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    }
+  ],
+  "ignoredMatchCount": 3560,
+  "matchesBySeverity": {
+    "Critical": 0,
+    "High": 1,
+    "Medium": 617,
+    "Low": 87,
+    "Negligible": 6,
+    "Unknown": 0
+  },
+  "criticalGatePassed": true,
+  "sbomArtifactCount": 494,
+  "rawReportSHA256": "dd4c066761940d0a039982613623029276bea6acd8aa187d183ea6b39e72effb",
+  "rawSBOMSHA256": "4b1c2f419d09b4a79940889905110e36925f07c5b983660e946be5d9761ee401",
+  "functionalSmoke": {
+    "passed": true,
+    "logSHA256": "7b295cf61c5c957b059382232a66ca631062b20a9c3057dba1b2ebba2fbf4697"
+  },
+  "securitySmoke": {
+    "passed": true,
+    "logSHA256": "b70f518c13c45c0c3fd4af1346473b8199b22f1cbcf3edc409c5fa38eb99e734",
+    "checks": [
+      "libcurl proxy/netrc credentials",
+      "Digest origin/proxy isolation",
+      "CLI/library PSL cookies and CLI netrc users",
+      "npm normal brace expansion and both recursion cases",
+      "undici WebSocket rejection and continued HTTP client operation",
+      "installed npm private policy/no-store/Set-Cookie omission/separate caches"
+    ]
+  },
+  "oldUbuntu24NegativeControl": {
+    "passed": false,
+    "exitCode": 1,
+    "logSHA256": "b4372dd78a8154a4f8080f8a318f25ddaa369376a77c94dcff99dc7d086cb68a"
+  },
+  "removedUnusedHelper": "/usr/bin/pebble, the sole binary carrying four fixable High Go-stdlib matches in the initial Ubuntu26 scan",
+  "remainingHigh": [
+    {
+      "package": "http-cache-semantics",
+      "version": "4.2.0",
+      "advisory": "GHSA-ch52-4w7c-c8xp",
+      "fix": {
+        "versions": [],
+        "state": "not-fixed"
+      }
+    }
+  ],
+  "cacheAssessment": {
+    "libraryPatched": false,
+    "scannerSuppressed": false,
+    "testedDefaultNpmCallerShared": false,
+    "defaultCachePath": "/home/runner/.npm",
+    "operatorHomeVolumes": "per-Pod EmptyDir",
+    "limits": "Not a certification of arbitrary shared-cache/library/downstream configuration or real vendor sessions"
+  },
+  "nativeAMD64Verified": false,
+  "releaseApproved": false,
+  "vendorAcceptancePassed": false,
+  "published": false
+}
