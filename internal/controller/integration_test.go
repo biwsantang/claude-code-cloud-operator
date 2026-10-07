@@ -171,6 +171,27 @@ func TestAPIRecovery(t *testing.T) {
 		if admin.Update(ctx, bad) == nil {
 			t.Fatal("uncapped token lifetime admitted")
 		}
+		for _, mutate := range []func(*api.ClaudeRunnerFleet){
+			func(f *api.ClaudeRunnerFleet) { f.Spec.Execution.NodeSelector = map[string]string{"bad key": "pool"} },
+			func(f *api.ClaudeRunnerFleet) {
+				f.Spec.Execution.Proxy.PodLabels = map[string]string{"app": "bad value"}
+			},
+			func(f *api.ClaudeRunnerFleet) { f.Spec.Execution.Proxy.URL = "http://extra.proxy.proxy.svc:3128" },
+			func(f *api.ClaudeRunnerFleet) {
+				f.Spec.Execution.Tolerations = []corev1.Toleration{{Operator: corev1.TolerationOpExists, Value: "forbidden"}}
+			},
+			func(f *api.ClaudeRunnerFleet) {
+				f.Spec.Execution.Tolerations = []corev1.Toleration{{Key: "pool", Effect: "InvalidEffect"}}
+			},
+			func(f *api.ClaudeRunnerFleet) { f.Spec.EnvironmentSecretRef.Name = "bad/name" },
+		} {
+			bad = f.DeepCopy()
+			bad.Spec.Suspended = true
+			mutate(bad)
+			if admin.Update(ctx, bad) == nil {
+				t.Fatal("invalid placement/proxy/reference accepted before submission")
+			}
+		}
 		cm := &corev1.ConfigMap{}
 		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.NetworkReportRef.Name}, cm))
 		must(t, admin.Delete(ctx, cm))

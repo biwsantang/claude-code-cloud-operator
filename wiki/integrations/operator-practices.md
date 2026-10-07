@@ -6,7 +6,7 @@ tags: [kubernetes, operator, research]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T13:06:00+07:00"
 sources:
   - resource: https://book.kubebuilder.io/reference/good-practices
   - resource: https://ahmet.im/blog/controller-pitfalls/
@@ -48,3 +48,12 @@ installation and recovery tests pass. Library matching is distinct from cluster 
 Native Claude CLI candidate: 2.1.285, checked per architecture during runtime builds; vendor redistribution
 is an unresolved release gate. Use synthetic credentials for tests. Do not publish vendor runtime artifacts
 until permitted redistribution and real integration evidence are recorded.
+
+## Validate generated children before consuming an irreversible fence
+
+A typed CRD field is not automatically a valid Pod selector or toleration. Admission checks label keys/values,
+portable Equal/Exists tolerations, namespace/reference names and an exact approved proxy Service name
+before accepting execution intent. The allowed toleration shape follows [Kubernetes validation](https://github.com/kubernetes/kubernetes/blob/v1.37.1/pkg/apis/core/validation/validation.go); feature-gated numeric operators are excluded for portability to the minimum version. Service names use the older DNS label contract. Errors remain fixed and do not echo user values.
+
+API-server tests reject malformed suspended Fleet updates before any launch, avoiding an irreversible fence
+being consumed by a child Pod that the API would reject. The policy also rejects negative eviction seconds.

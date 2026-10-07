@@ -30,3 +30,31 @@ func TestNamesAndBudget(t *testing.T) {
 		t.Fatal("metadata proxy permitted")
 	}
 }
+
+func TestPortableTolerations(t *testing.T) {
+	zero, negative := int64(0), int64(-1)
+	for _, toleration := range []corev1.Toleration{
+		{Key: "example.invalid/pool", Value: "production", Effect: corev1.TaintEffectNoSchedule},
+		{Key: "pool", Operator: corev1.TolerationOpExists},
+		{Operator: corev1.TolerationOpExists},
+		{Key: "pool", Effect: corev1.TaintEffectNoExecute, TolerationSeconds: &zero},
+	} {
+		if err := validateToleration(toleration); err != nil {
+			t.Fatal("portable placement rejected", err)
+		}
+	}
+	for _, toleration := range []corev1.Toleration{
+		{},
+		{Key: "bad key", Operator: corev1.TolerationOpExists},
+		{Key: "pool", Operator: corev1.TolerationOpExists, Value: "unexpected"},
+		{Key: "pool", Operator: "FeatureGatedComparison"},
+		{Key: "pool", Effect: "InvalidEffect"},
+		{Key: "pool", Value: "bad value"},
+		{Key: "pool", Effect: corev1.TaintEffectNoSchedule, TolerationSeconds: &zero},
+		{Key: "pool", Effect: corev1.TaintEffectNoExecute, TolerationSeconds: &negative},
+	} {
+		if validateToleration(toleration) == nil {
+			t.Fatal("unsafe or unsupported placement accepted")
+		}
+	}
+}

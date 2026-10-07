@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:02:00+07:00"
+  at: "2026-10-07T13:08:00+07:00"
 ---
 
 # Implementation evidence
@@ -16,7 +16,7 @@ worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
 The [GitHub verification run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37575653587)
 passes all jobs: unit/race/vet/dependency checks, generated-source parity, Linux AMD64/ARM64 cross-builds and both API-server matrix versions.
 The subsequent recovery changes pass local `make verify` and the expanded API-server suite on both versions.
-The tested ARM64 manager architecture-manifest digest for these changes is
+The tested ARM64 manager architecture-manifest digest at recovery commit `79b8921` is
 `sha256:71cdd7313c567406bd999f5eb9e1e409add3353f3c1480041e7534634bf454bb`.
 This is a local private build, not a published release. The earlier CI link applies to its named commit;
 follow the PR checks for the latest revision.
@@ -71,7 +71,7 @@ upstream compatibility guarantee. Do not advertise a universal supported product
 
 | Plan requirement | Candidate evidence | Remaining acceptance |
 | --- | --- | --- |
-| Declarative fleet intent | CRD defaults, admission, suspended cluster example and scoped convergence. | Complete typed placement validation audit and downstream configuration. |
+| Declarative fleet intent | CRD defaults, admission, suspended cluster example and scoped convergence. Labels/tolerations/proxy Service and reference names are rejected before submission; portable valid tolerations pass unit tests. | Typed label/toleration/proxy/reference rejection now passes real admission tests; downstream configuration remains pending. |
 | Supported native intake | Native CLI flags, durable repair/concurrency tests, permanent/transient API classifications. | Server-time/clock-skew handling is inconsistent across hook, admission and controller; reopened task 3.1. Real native dispatch unverified. |
 | No repeated operator submission | Fence/write-boundary recovery, concurrent controllers, single POST transport and lost/late Pod tests. | Physical API/node/scheduling faults and scale remain pending. |
 | Session isolation | Pod builders, installed RBAC denial and enforced Cilium/proxy tests from two fresh Pods. | Downstream network approval and vendor session execution. |

@@ -13,6 +13,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -64,9 +65,24 @@ func ValidateExecution(p api.ExecutionPolicy) error {
 	if p.Proxy.Namespace == "" || len(p.Proxy.PodLabels) == 0 || p.Proxy.Port < 1 || p.Proxy.Port > 65535 {
 		return errors.New("proxy peer selector is required")
 	}
+	if len(validation.IsDNS1123Label(p.Proxy.Namespace)) != 0 || !validLabels(p.Proxy.PodLabels) || !validLabels(p.NodeSelector) {
+		return errors.New("proxy namespace or placement selectors are invalid")
+	}
+	for _, toleration := range p.Tolerations {
+		if err := validateToleration(toleration); err != nil {
+			return err
+		}
+	}
+	if p.HostConfigRef != nil && len(validation.IsDNS1123Subdomain(p.HostConfigRef.Name)) != 0 {
+		return errors.New("host configuration reference is invalid")
+	}
 	// Approved DNS proxy service only; IP literals, localhost and arbitrary hosts are disallowed.
 	if !strings.HasSuffix(u.Hostname(), "."+p.Proxy.Namespace+".svc") && !strings.HasSuffix(u.Hostname(), "."+p.Proxy.Namespace+".svc.cluster.local") {
 		return errors.New("proxy must name a Service in its approved namespace")
+	}
+	serviceName := strings.Split(u.Hostname(), ".")[0]
+	if len(validation.IsDNS1035Label(serviceName)) != 0 || u.Hostname() != serviceName+"."+p.Proxy.Namespace+".svc" && u.Hostname() != serviceName+"."+p.Proxy.Namespace+".svc.cluster.local" {
+		return errors.New("proxy must name exactly one valid Service")
 	}
 	if len(p.Resources.Claims) > 0 || len(p.Resources.Requests) != 2 || len(p.Resources.Limits) != 1 {
 		return errors.New("resources require CPU/memory requests and memory limit only")
@@ -86,6 +102,44 @@ func ValidateExecution(p api.ExecutionPolicy) error {
 	}
 	return nil
 }
+
+func validLabels(labels map[string]string) bool {
+	for key, value := range labels {
+		if len(validation.IsQualifiedName(key)) != 0 || len(validation.IsValidLabelValue(value)) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Restrict placement to the portable Equal/Exists contract, independent of feature gates.
+func validateToleration(t corev1.Toleration) error {
+	invalid := errors.New("placement toleration is invalid")
+	if t.Key != "" && len(validation.IsQualifiedName(t.Key)) != 0 || t.Key == "" && t.Operator != corev1.TolerationOpExists {
+		return invalid
+	}
+	switch t.Operator {
+	case "", corev1.TolerationOpEqual:
+		if len(validation.IsValidLabelValue(t.Value)) != 0 {
+			return invalid
+		}
+	case corev1.TolerationOpExists:
+		if t.Value != "" {
+			return invalid
+		}
+	default:
+		return invalid
+	}
+	switch t.Effect {
+	case "", corev1.TaintEffectNoSchedule, corev1.TaintEffectPreferNoSchedule, corev1.TaintEffectNoExecute:
+	default:
+		return invalid
+	}
+	if t.TolerationSeconds != nil && (t.Effect != corev1.TaintEffectNoExecute || *t.TolerationSeconds < 0) {
+		return invalid
+	}
+	return nil
+}
 func ValidateFleet(f *api.ClaudeRunnerFleet) error {
 	if len(f.Name) > 40 || !safeID.MatchString(f.Spec.EnvironmentID) || !digestImage.MatchString(f.Spec.OrchestratorImage) || !digestImage.MatchString(f.Spec.HookImage) {
 		return errors.New("fleet identity or images are invalid")
@@ -98,6 +152,9 @@ func ValidateFleet(f *api.ClaudeRunnerFleet) error {
 	}
 	if f.Spec.EnvironmentSecretRef.Name == "" || f.Spec.NetworkReportRef.Name == "" || f.Spec.OrchestratorReplicas < 1 || f.Spec.OrchestratorReplicas > 10 {
 		return errors.New("required inputs are missing")
+	}
+	if len(validation.IsDNS1123Subdomain(f.Spec.EnvironmentSecretRef.Name)) != 0 || len(validation.IsDNS1123Subdomain(f.Spec.NetworkReportRef.Name)) != 0 {
+		return errors.New("credential or report reference is invalid")
 	}
 	if f.Spec.HookTimeoutSeconds < 1 || f.Spec.HookTimeoutSeconds > 300 || f.Spec.SpawnLeaseSeconds < 10 || f.Spec.SpawnLeaseSeconds > 3600 || f.Spec.HookTimeoutSeconds+5 >= f.Spec.SpawnLeaseSeconds {
 		return errors.New("hook timeout plus grace must be below the common spawn lease")
