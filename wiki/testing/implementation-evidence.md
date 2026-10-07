@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:31:22+07:00"
+  at: "2026-10-07T17:58:13+07:00"
 ---
 
 # Implementation evidence
@@ -287,6 +287,21 @@ A separately hashed Syft catalogue identifies the upstream Python binary and act
 `make verify` and the 1.33.0 API suite pass. [Matching native AMD64 CI passes](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37607651747/job/112746981191)
 for source 4ed9067, including Python venv/offline pip and all prior CLI/npm probes. Task 5.1 is restored
 for this revision. No source tests or smaller scanner count substitute for release acceptance.
+
+## Upstream SSH client revision
+
+The [runtime review](runtime-vulnerability-review.md) and [source-bound evidence](evidence/openssh-runtime-smoke.json)
+record pinned upstream OpenSSH 10.6p1 source/signature verification, client-only installation and original
+license-byte retention. Native ARM64 full restricted SDK smoke passes SSH signing/tamper rejection,
+agent sign/remove and local scp. GSSAPI authentication is retained; Debian's GSSAPI key-exchange extension
+is absent and explicitly rejected. Actual remote SSH, vendor Git and hardware tokens remain untested.
+
+Grype reports 24 Critical matches, all in curl/libcurl, with zero ignored matches and a failed release
+threshold. Syft does not identify the compiled SSH clients; the image's pinned source/binary build record
+supplements that inventory gap. The missing old package match alone does not prove a security fix.
+Local AMD64 compilation failed under QEMU; matching native AMD64 CI is pending and task 5.1 stays reopened.
+Local `make verify` and the real Kubernetes 1.33.0 API-server suite pass. No release or vendor acceptance
+is inferred from these results.
 
 ## External gates
 

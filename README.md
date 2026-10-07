@@ -55,6 +55,11 @@ Replace the placeholder image in `config/install` before using raw manifests. Ke
 the installation, proxy/network and dedicated vendor acceptance checks pass. The chart does not create
 external Claude environments, organization settings or cloud credentials.
 
+Installing the operator does not require KMS or a release-signing key. Publisher CI owns release
+signing; installers verify its trusted identity and use pinned images. Anthropic credentials are
+supplied through namespace Secret references, while cert-manager manages webhook TLS. See the
+[signing responsibility guide](wiki/workflows/release-candidates.md).
+
 Follow the [installation and drain guide](wiki/operations/install-and-drain.md) before an upgrade or uninstall.
 Uninstalling the manager before draining orders prevents finalizer cleanup. Retained CRDs and namespace
 allow recovery. Company deployment, secret-store and nodepool configuration belong downstream.

@@ -11,6 +11,14 @@ This is a maintained override of the npm bundle, recorded in
 Update/revalidate these overrides when updating npm and remove them once upstream includes the fixes.
 Unresolved distro/runtime findings remain release gates.
 
+The client tools are built from checksum-pinned, signature-verified upstream OpenSSH 10.6p1 source
+in a disposable build stage. The runtime retains client configuration, helpers, manuals and original
+licenses, with no sshd or setuid helper. GSSAPI authentication is supported; Debian's separate
+GSSAPIKeyExchange extension is not. Source/binary pins are recorded in
+`/usr/local/share/claude-runtime/openssh-build.json`. Review the
+[runtime evidence and compatibility limits](../../wiki/testing/runtime-vulnerability-review.md)
+before accepting this upstream client revision.
+
 No vendor runtime image is published by CI. The operator's Apache-2.0 license does not license the vendor binary.
 Redistribution approval and dedicated vendor/network E2E remain release gates. Native registration must use the
 per-order credential; never bake an environment key, API key, OAuth login or cloud identity into this image.

@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T17:31:22+07:00"
+  at: "2026-10-07T17:58:13+07:00"
 ---
 
 # Implementation tasks
@@ -42,7 +42,7 @@ Tasks are checked only when their complete verification passes. External release
 
 ## 5. Runtime and security
 
-- [x] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
+- [ ] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
 - [x] 5.2 Generate Pod security/storage/resources and configurable placement; verification: no API/environment key/cloud identity access from sessions and no fleet concurrency cap introduced.
 - [x] 5.3 Establish proxy/egress integration and network acceptance report format; verification: direct/proxied denial and fresh-Pod startup tests on enforced-network clusters, not envtest alone.
 
@@ -99,3 +99,6 @@ Task 5.1 passes for the Debian 13/Python 3.14.8 revision after matching native A
 execute the full restricted SDK/CLI smoke, including offline Python venv/pip and the npm advisory probes.
 Both final architecture scans retain 25 Critical matches; eight earlier matches disappear and six
 newer-version curl matches are added. This advances task 7.3 without clearing its release gate.
+
+Task 5.1 is reopened for the pinned upstream OpenSSH client revision until both native architecture
+SDK/smoke checks pass. Task 7.3 retains all remaining runtime vulnerability and release gates.
