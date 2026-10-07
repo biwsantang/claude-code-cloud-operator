@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:53:19+07:00"
+  at: "2026-10-07T19:32:32+07:00"
 ---
 
 # Implementation evidence
@@ -190,7 +190,11 @@ administratively decommissioned; this does not certify automatic cloud-node reco
 policy. No production throughput or native registration startup p99 was measured. Tasks 2.3/6.3/6.4 retain
 their corresponding real integration and tuning gates.
 
-## Private candidate and vulnerability checks
+## Historical private candidate and vulnerability checks
+
+The offline bundle/signature tools described in this section were retired by the simplicity review.
+These records describe their pinned source revisions, not the current release path. The notice collector
+is retained and now includes upstream notices in manager/hook images. See [operator releases](../workflows/release-candidates.md).
 
 Source commit `aa0318de15628e9e8c6fe729fd9c5cdf1caa66cd` builds a clean private review bundle with
 `hack/build-candidate.py`. The [sanitized result](evidence/candidate-smoke.json) records the source/tree
@@ -215,8 +219,8 @@ rejection. The original candidate is not signed by that fixture; its private tes
 The result explicitly records no production signature, vendor runtime or publication.
 
 `make verify`, `make test-api` on 1.33.0, actionlint, wiki validation and redacted secret scan pass for this
-preparation. The [candidate guide](../workflows/release-candidates.md) gives verified tool asset pins,
-build/sign/verify reproduction and the private key trust policy. The policy has no public transparency log,
+preparation. The former candidate guide recorded verified tool asset pins, build/sign/verify reproduction and the
+private key trust policy at this source revision; the [release guide](../workflows/release-candidates.md) now describes the replacement path. The policy has no public transparency log,
 certificate identity or timestamp proof; production signing identity, key lifecycle, license review, container
 artifact checks and release approval remain pending. Task 7.3 is not marked complete from this exercise.
 
@@ -339,3 +343,26 @@ Dedicated test-only environment credentials and OAuth registration are not avail
 Real vendor acceptance, enforced downstream egress, measured downstream startup p99, non-overlapping migration,
 reviewed release signatures and vendor redistribution remain incomplete. No live fleet is activated and no
 release is published. Session success is never inferred from Pod exit status.
+
+## Simplicity revision verification
+
+The revision separates operator release CI from the optional runtime, removes the offline bundle/signature
+path and makes network-report expiry optional. Local `make verify` passes (unit/race, vet, dependency
+integrity, generation/packaging and four notice tests); all eight remaining Python tests pass when the
+separate runtime archive tests are included. Real API-server suites pass on Kubernetes 1.33.0 and 1.37.0,
+including unchanged approval after 30 days, explicit expiry, missing/failed/mismatched approval, revoked
+polling and blocked unlaunched orders. Existing crash, concurrency, retention and replay cases still pass.
+
+Manager/hook images build for Linux AMD64 and ARM64. Native ARM64 and emulated AMD64 hook installation
+passes with a non-root UID, read-only root and the 32Mi hook volume. Both images include 140 original
+module/toolchain notice files. The manager's restricted offline help path runs. The exact release tag
+guard accepts valid stable/prerelease tags and rejects malformed tags, leading-zero numeric prereleases
+and commits outside main history. The exact packaging step passes chart lint/package with version/appVersion,
+substitutes an actual local manager digest into raw installation and verifies all SHA256SUMS. Actionlint,
+workflow YAML parsing and local Markdown/wiki checks pass.
+
+Redacted Gitleaks returns five generic-key matches in unchanged runtime/evidence files: one public
+release-key archive hash, one test-log hash, one public signing-key fingerprint and two binary hashes.
+No new match or suppression is introduced. This is reviewed scanner output, not a zero-findings claim.
+Registry publishing, release SBOM/provenance attachment and real Claude/network acceptance have not been
+executed by this local verification. Remote source/image CI is checked separately on the pushed revision.

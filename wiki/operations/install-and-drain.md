@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:47:00+07:00"
+  at: "2026-10-07T19:32:32+07:00"
 ---
 
 # Installation and lifecycle operations
@@ -20,7 +20,7 @@ Do not associate session identities with cloud roles. Keep image/config/Fleet/re
 
 ## Before activation
 
-1. Build privately and verify manager, hook and vendor runtime candidates; pin image digests.
+1. Obtain tested manager/hook images and a separately accepted Claude runtime; pin image digests.
 2. Install cert-manager, create the trust namespace and apply Restricted Pod Security labels.
 3. Install the chart with a tested manager digest, or render the raw source after changing its placeholder image.
 4. Wait for manager readiness and test installed admission. Credential webhook request filtering must remain intact.
@@ -30,8 +30,8 @@ Do not associate session identities with cloud roles. Keep image/config/Fleet/re
    allowlist that rejects Kubernetes, private services, metadata/cloud identity and redirect bypass.
 7. Reproduce all required network tests from fresh Pods with the Fleet's policy labels. A trusted producer writes
    a ConfigMap with `report.json` matching `internal/contract.Report`. Bind Fleet UID, policy digest, evidence,
-   test time and expiry (at most 24 hours). Untrusted sessions and hooks must have no report-write permission.
-8. Complete dedicated vendor acceptance. Activate only after these gates pass. Missing/stale reports or changed
+   test time and optional administrator-selected expiry. Untrusted sessions and hooks must have no report-write permission.
+8. Complete dedicated vendor acceptance. Activate only after these gates pass. Missing/expired reports or changed
    policy stop polling/new launches; active execution retains its existing policy.
 
 Synchronize the hook and manager nodes' clocks and monitor drift. The adapter translates the native poll's
@@ -50,6 +50,18 @@ Service can briefly reject connections while routing converges, even after manag
 side-effect-free check after the endpoint settles; do not disable admission to bypass a startup error. The
 final-image kind test reproduced this transient and then passed the dry run. Dry-run success proves the
 installation path, not vendor or network acceptance.
+
+## Network approval and infrastructure changes
+
+Omit `validUntil` for approval that lasts until revocation or a policy change; set it to a future timestamp
+when the installation requires periodic reassessment. Existing reports with an expiry still expire as
+before. There is no automatic daily cutoff or automatic renewal. Test time, Fleet/policy binding, evidence
+and every required successful deny/allow check remain mandatory.
+
+Reports are trusted administrator assertions, not continuous CNI health detection. Suspend before changing
+CNI, proxy or egress infrastructure, increment `execution.securityRevision`, run the fresh-Pod checks again
+and replace the report before resuming. Removing the report revokes approval. Policy/Fleet mismatch, failed
+checks, missing test time or an expired report block new intake/launches; active execution is preserved.
 
 ## Rotate polling credentials or configuration
 

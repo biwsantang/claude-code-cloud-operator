@@ -1,158 +1,77 @@
 ---
 type: Repository Documentation
-title: "Private release candidate verification"
-description: "Build, catalogue and verify review artifacts before selecting a publishing identity."
+title: "Operator releases"
+description: "Standard image and chart publishing with separate runtime acceptance."
 tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T16:54:15+07:00"
+  at: "2026-10-07T19:32:32+07:00"
 sources:
-  - resource: repo://hack/build-candidate.py
-  - resource: repo://hack/verify-candidate.py
-  - resource: repo://hack/candidate-smoke.py
-  - resource: repo://hack/collect-notices.py
+  - resource: repo://.github/workflows/release.yml
   - resource: repo://.github/workflows/test.yml
-  - resource: https://github.com/golang/vuln/tree/v1.8.0
-  - resource: https://github.com/anchore/syft/releases/tag/v1.54.1
-  - resource: https://github.com/sigstore/cosign/releases/tag/v3.1.3
-  - resource: https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations
-  - resource: https://go.dev/ref/mod#go-mod-verify
-  - resource: https://www.apache.org/licenses/LICENSE-2.0
-  - resource: https://docs.sigstore.dev/cosign/signing/signing_with_containers/
-  - resource: https://docs.sigstore.dev/cosign/signing/signing_with_blobs/
-  - resource: repo://api/v1alpha1/clauderunnerfleet_types.go
+  - resource: repo://.github/workflows/runtime.yml
+  - resource: https://docs.docker.com/build/ci/github-actions/attestations/
+  - resource: https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images
 ---
 
-# Build a private review bundle
+# Operator images and chart
 
-This advances release preparation in [task 7.3](../changes/build-kubernetes-operator/tasks.md).
-It does not complete release acceptance, publish images or include the vendor runtime. Keep the full
-native image, licensing, support, signing-identity and integration gates in the plan.
+The release unit is the manager image, spawn-hook image, chart and raw installation manifests. Claude's
+native binary and the optional custom runtime are excluded. The former offline review-bundle producer,
+custom inventory verifier and signing exercise have been removed; their evidence remains historical.
+No release has been published. The new workflow must pass CI and its first tagged execution before claiming
+publication evidence. Real vendor acceptance remains required before production use of a Fleet.
 
-The producer builds manager and hook binaries for Linux AMD64/ARM64 with the exact Go version in
-`go.mod`, CGO disabled, trimmed paths and embedded VCS metadata. It runs the source vulnerability scan
-for each target architecture, catalogues each compiled binary into a CycloneDX SBOM, and checks that every
-compiled dependency in Go build information appears in the catalogue. The bundle includes build information,
-scan output, raw installation resources, a chart archive and the source license. Chart installation still
-requires a separately verified manager image digest; its empty default is intentional.
+## Verification
 
-The producer also includes `third-party-notices.tar.gz` and `third-party-notices.json` in the signed inventory.
-The [notice collector](../../hack/collect-notices.py) derives the module/version/checksum union from actual
-compiled build information, verifies each download matches that identity, and runs
-[`go mod verify`](https://go.dev/ref/mod#go-mod-verify) before and after collection to detect modified cached
-module source. It preserves original license, notice, patent, copyright and author files recursively, including
-variant names such as `LICENSE-MIT`, plus the selected compiler's notice files. The archive has normalized
-metadata; the index binds original source paths, bytes/hashes and the binaries using each module without
-embedding local cache paths. Missing license files, replacement-module provenance, inconsistent compiler or
-checksum identities, modules outside the current unreplaced build list, symlinks and oversized inputs fail collection.
+Pull requests run one source job (unit/race/vet, module integrity, generated parity, notices tests,
+AMD64/ARM64 cross-builds and reachable-Go vulnerability checks), one Kubernetes 1.33 API job and one
+AMD64 manager/hook build/scan job. Main and tagged releases also test API versions 1.36/1.37 and ARM64
+images. This is empirical compatibility coverage, not a vendor support commitment.
 
-This deliberately includes whole module/toolchain trees, so it can include notices for uncompiled code.
-Filename discovery is not semantic license analysis: reviewers must check relevant source headers, additional
-terms and distribution obligations. The index always records `licenseReviewApproved: false` and excludes the
-vendor runtime. The [Apache license's redistribution conditions](https://www.apache.org/licenses/LICENSE-2.0)
-include retaining applicable notices; the repository's own license cannot substitute for dependency terms.
-Review container OS licenses and [vendor distribution/public naming](../integrations/anthropic-contract.md)
-separately before publishing. Neither an SBOM nor a collected notice archive proves licensing approval.
+Image scans use the pinned Grype action/version, fail on Critical findings including unfixed findings,
+and retain reports for seven days. High and lower findings remain visible for release review; do not add
+blanket ignores or replace a failed scan with a success. Image SBOMs inventory dependencies; source
+vulnerability checks additionally detect known reachable Go issues. Actions are pinned to commits.
 
-`candidate.json` binds every file's SHA-256 and size, the source commit/tree digest, tool versions and dirty
-source flag. It always records `releaseApproved: false` and `vendorRuntimeIncluded: false`. The source
-snapshot must remain unchanged during the build. Output must be outside the worktree and a new directory.
-Dirty source is rejected unless `--allow-dirty` explicitly requests an uncommitted review candidate.
+The separate runtime workflow runs only on runtime-related changes or manual dispatch, retains its
+existing smoke/security gates and publishes no vendor software. An operator check cannot certify the
+runtime, and a runtime advisory is not automatically a vulnerability in the manager/hook.
 
-Use verified Syft 1.54.1 and Cosign 3.1.3 executables. Their upstream asset pins are:
+## Publish
 
-| Tool asset | SHA-256 |
-| --- | --- |
-| Syft 1.54.1 darwin_arm64 tar.gz | `b4319c3abaa87a0170ab76ee83ea2260ca34b53aecfa3ab0dd5428d2319d744f` |
-| Syft 1.54.1 linux_amd64 tar.gz | `c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47` |
-| Cosign 3.1.3 darwin-arm64 binary | `5cf948c2f4dfe59687bdd0b8523709067383e03982cc543475c8a7dc70e92a76` |
-| Cosign 3.1.3 linux-amd64 binary | `4629c757b7618056f8ddd7e2625ae9fdd94c0372a65049520bc7d9df9efc7f71` |
+After the reviewed code is merged into `main`, a maintainer tags its commit `vMAJOR.MINOR.PATCH`, optionally
+with a prerelease suffix such as `v0.1.0-rc.1`. The workflow rejects malformed tags and commits outside
+`main` history. It repeats the full operator checks before giving the publishing jobs write permissions.
 
-Govulncheck module tag `v1.8.0` resolves to upstream commit
-`709015412431dd2b5b28a53c06c70bc02d49074c`. Build it with the pinned project toolchain:
+The workflow pushes `ghcr.io/OWNER/claude-code-cloud-operator-manager` and the corresponding `-hook` image
+for Linux AMD64/ARM64. Version and source-commit tags identify the release; recorded OCI digests are the
+installation identity. It includes standard SBOM/BuildKit provenance and original dependency/compiler
+notices inside each image. [Docker attestation documentation](https://docs.docker.com/build/ci/github-actions/attestations/)
 
-```sh
-GOTOOLCHAIN=go1.27.1 GOBIN=PATH_TO_TOOLS go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-python3 hack/build-candidate.py --output /tmp/claude-review-UNIQUE \
-  --syft PATH_TO_VERIFIED_SYFT --govulncheck PATH_TO_GOVULNCHECK
-```
+It then packages the chart with the tag's version/appVersion, substitutes the manager digest into raw
+installation manifests and creates the GitHub release with image references, LICENSE and SHA256SUMS.
+No standalone binary matrix or custom signed inventory is distributed. GHCR uses the repository's scoped
+`GITHUB_TOKEN`; no cloud account, KMS or manually managed release key is required.
+[GitHub publishing documentation](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
 
-The CLI selects that project compiler for both Go builds and the scanner's subprocesses. A PATH launcher
-with an older global Go version must not silently select the scanner's analysis version. The older GitHub
-release page identified v1.1.4; it failed to analyze Go 1.27 syntax even after rebuilding its executable.
-The current Go module tag and analysis libraries were verified independently, then full source scans passed.
+BuildKit provenance and checksums are build/integrity metadata, not independent publisher signatures.
+For this private project, trust begins with access to the expected repository/registry, reviewed main
+history and controlled tag writers; install by digest. The workflow grants package writes only to the
+image jobs and release writes only to the packaging job. Protect main and version-tag creation in the
+repository settings before enabling publishing. Keyless signatures can be added with standard tooling
+if the distribution policy requires independent publisher verification; evaluate transparency disclosure
+and private-repository feature availability first. No runtime process should own release-signing keys.
 
-The [scanner documentation](https://github.com/golang/vuln/blob/v1.8.0/cmd/govulncheck/doc.go) explains
-that JSON/SARIF output exits zero even with findings. CI and the producer use text mode so findings and
-scan errors fail the gate. These checks cover known reachable Go vulnerabilities for the selected build;
-reflection/unsafe limitations, container OS packages, the vendor binary and future advisories need separate
-review. An SBOM is inventory evidence, not a license or vulnerability clearance.
+## Runtime and installation
 
-## Signing responsibility and installation
+Administrators provide a separately accepted runtime image for both orchestrator and session runners.
+The optional [runtime candidate](../../images/runtime/README.md) has unresolved Critical findings and is
+not release-approved. Its custom curl/OpenSSH/npm maintenance stays isolated and can be replaced by a
+compatible accepted image without rebuilding the operator.
 
-KMS is optional publisher infrastructure. Operator installers and Fleet authors do not need a signing
-key, a KMS account or a KMS field in the CRD. The running manager/hook/session Pods never receive a
-release-signing private key or KMS signing permission. Release CI or the maintainer signs artifacts;
-consumers verify the expected publisher identity/public key before using pinned image digests.
-
-[Cosign supports encrypted local keys and KMS](https://docs.sigstore.dev/cosign/signing/signing_with_containers/).
-The current private candidate verifier supports a supplied independently trusted public key, regardless
-of whether its corresponding private key is stored as a managed encrypted file or in KMS. Production
-key bootstrap, custody, public-key distribution and rotation belong to the publisher. The operator must
-not generate a key and treat its own signatures as an independent release trust anchor.
-
-For future public releases, [keyless CI signing](https://docs.sigstore.dev/cosign/signing/signing_with_blobs/)
-is recommended: an ephemeral key is bound to OIDC identity, with verification restricted to the intended
-release workflow identity and issuer. This is a proposed publishing option; `verify-candidate.py` has no
-keyless mode today. Public transparency-log disclosure must be considered while this repository is private.
-The existing offline private-key policy below remains the implemented candidate path.
-
-The Anthropic environment credential is a separately supplied namespace Secret reference. Optional
-external secret synchronization belongs to downstream infrastructure. Admission webhook TLS is a third
-responsibility: installation manifests use cert-manager to issue/renew certificates and inject the CA.
-Automated webhook certificate management does not authorize the operator to create release-signing keys
-or Anthropic credentials. See the [installation guide](../operations/install-and-drain.md).
-
-## Private signing policy
-
-[GitHub's artifact attestation feature](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations)
-requires Enterprise Cloud for private/internal repositories. Do not change repository visibility or assume
-that feature is available. This candidate path supports self-managed/KMS signing keys with an independently
-distributed public key; the release identity and key management remain an acceptance decision.
-Native environment keys, session/OAuth credentials and Anthropic's JWT verification keys serve separate
-authentication purposes and cannot substitute for this release signing identity.
-
-After that identity is selected, sign the manifest, which binds the complete inventory:
-
-```sh
-PATH_TO_COSIGN sign-blob --key PATH_OR_KMS_REFERENCE \
-  --use-signing-config=false --tlog-upload=false --yes \
-  --bundle /tmp/claude-review-UNIQUE/candidate.sigstore.json \
-  /tmp/claude-review-UNIQUE/candidate.json
-python3 hack/verify-candidate.py --directory /tmp/claude-review-UNIQUE \
-  --cosign PATH_TO_VERIFIED_COSIGN --public-key INDEPENDENTLY_TRUSTED_PUBLIC_KEY
-```
-
-This offline key policy has no public transparency-log inclusion, certificate identity or timestamp evidence.
-The verifier explicitly verifies with the supplied trusted key and disables log verification for this policy;
-it has no keyless fallback. A key inside the candidate directory is rejected. Key distribution, rotation,
-revocation and publication approval must be resolved before a production release.
-
-The verifier checks the signature before parsing the manifest, then checks every file's size/hash and rejects
-missing/unlisted files, symlinks, unsafe names and unknown schemas. Verification proves integrity relative to
-the chosen trusted key; it does not prove source claims independently, licensing, safety or deployment approval.
-
-## Reproduce the signing exercise
-
-```sh
-python3 hack/candidate-smoke.py --directory /tmp/claude-review-UNIQUE \
-  --cosign PATH_TO_VERIFIED_COSIGN --evidence /tmp/claude-candidate-smoke.json
-```
-
-The fixture copies the candidate, generates ephemeral test-only keys in a private temporary directory and
-removes them on completion. It verifies the real Cosign signing path, then rejects a wrong trust key,
-modified manifest, same-size binary change, missing/extra files, symlinks and a candidate-provided key.
-It never signs the original candidate or creates a production key. [Implementation evidence](../testing/implementation-evidence.md)
-records observed results and their source state. `make test-candidate` runs independent inventory-boundary
-unit tests and notice/provenance boundaries; `make verify` includes them. Publication and real vendor acceptance remain pending.
+The environment credential is an existing namespace Secret. cert-manager handles admission TLS. New
+Fleets start suspended; [network approval and drain](../operations/install-and-drain.md) remain runtime
+requirements. Neither artifact publication nor a successful Pod smoke test proves registration, OAuth
+renewal, session recovery, network enforcement or redistribution rights for vendor software.

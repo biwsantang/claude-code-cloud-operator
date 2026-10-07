@@ -1,33 +1,18 @@
 name: Verify operator
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
+concurrency:
+  group: operator-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
-  runtime-amd64:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-      with:
-        persist-credentials: false
-    # Private, disposable build only: no registry login, image upload, vendor credential or publication.
-    - run: docker build --platform linux/amd64 -f images/runtime/Dockerfile -t claude-cloud-runtime:ci .
-    - run: sh hack/runtime-smoke.sh claude-cloud-runtime:ci linux/amd64
-    - name: Retain SBOM and enforce runtime Critical threshold
-      id: scan
-      run: python3 hack/runtime-scan.py --image claude-cloud-runtime:ci --output "$RUNNER_TEMP/runtime-scan"
-    # Private review metadata only; no binaries, image layers or vendor credentials are uploaded.
-    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
-      if: ${{ always() && !cancelled() && steps.scan.outcome != 'skipped' }}
-      with:
-        name: runtime-amd64-inventory
-        path: ${{ runner.temp }}/runtime-scan/*.json
-        retention-days: 7
-        if-no-files-found: error
   unit:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       with:
@@ -36,21 +21,29 @@ jobs:
       with:
         go-version-file: go.mod
     - run: go mod verify && go test -race ./... && go vet ./...
-    - run: python3 -m unittest discover -s hack -p 'test_*.py'
-      env:
-        PYTHONDONTWRITEBYTECODE: '1'
+    - run: make test-tools
     - run: go install sigs.k8s.io/kustomize/kustomize/v5@v5.8.1
     - run: make generate package && git diff --exit-code
+    - run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+      env:
+        GOTOOLCHAIN: local
+    # Text mode fails on findings; JSON/SARIF does not provide that gate.
     - run: |
         for arch in amd64 arm64; do
-          CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -o /tmp/manager-$arch ./cmd
-          CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -o /tmp/hook-$arch ./cmd/spawn-runner
+          GOARCH=$arch govulncheck ./cmd ./cmd/spawn-runner
+          GOARCH=$arch go build -o /tmp/manager-$arch ./cmd
+          GOARCH=$arch go build -o /tmp/hook-$arch ./cmd/spawn-runner
         done
+      env:
+        GOTOOLCHAIN: local
+        CGO_ENABLED: '0'
+        GOOS: linux
   api:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       matrix:
-        kubernetes: ['1.33.0', '1.36.0', '1.37.0']
+        kubernetes: ${{ fromJSON(github.event_name == 'pull_request' && '["1.33.0"]' || '["1.33.0", "1.36.0", "1.37.0"]') }}
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       with:
@@ -61,25 +54,55 @@ jobs:
     - run: go test -race -tags=integration ./internal/controller -v -count=1 -timeout=5m
       env:
         ENVTEST_VERSION: ${{ matrix.kubernetes }}
-  vulnerability:
-    runs-on: ubuntu-latest
+  images:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     strategy:
       matrix:
-        architecture: ['amd64', 'arm64']
+        architecture: ${{ fromJSON(github.event_name == 'pull_request' && '["amd64"]' || '["amd64", "arm64"]') }}
     steps:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
       with:
         persist-credentials: false
-    - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417
+    - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+    - name: Build manager and hook with dependency notices
+      run: |
+        for component in manager hook; do
+          docker buildx build --platform "linux/$ARCHITECTURE" --target "$component" \
+            --load -t "operator-$component:verify" .
+        done
+      env:
+        ARCHITECTURE: ${{ matrix.architecture }}
+    - name: Native restricted hook and manager smoke
+      if: ${{ matrix.architecture == 'amd64' }}
+      run: |
+        sh hack/hook-smoke.sh operator-hook:verify linux/amd64
+        docker run --rm --network none --read-only --cap-drop ALL \
+          --security-opt no-new-privileges operator-manager:verify --help
+    - name: Scan manager
+      uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2
       with:
-        go-version-file: go.mod
-    - run: go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-      env:
-        GOTOOLCHAIN: local
-    # Text mode fails on findings; JSON/SARIF exit zero even when vulnerabilities exist.
-    - run: govulncheck ./cmd ./cmd/spawn-runner
-      env:
-        GOTOOLCHAIN: local
-        CGO_ENABLED: '0'
-        GOOS: linux
-        GOARCH: ${{ matrix.architecture }}
+        image: operator-manager:verify
+        grype-version: '0.120.1'
+        severity-cutoff: critical
+        fail-build: true
+        only-fixed: false
+        output-format: json
+        output-file: ${{ runner.temp }}/manager-scan.json
+    - name: Scan hook
+      uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2
+      with:
+        image: operator-hook:verify
+        grype-version: '0.120.1'
+        severity-cutoff: critical
+        fail-build: true
+        only-fixed: false
+        output-format: json
+        output-file: ${{ runner.temp }}/hook-scan.json
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      if: ${{ always() && !cancelled() }}
+      with:
+        name: operator-scans-${{ matrix.architecture }}
+        path: ${{ runner.temp }}/*-scan.json
+        retention-days: 7
+        if-no-files-found: ignore

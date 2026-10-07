@@ -11,7 +11,7 @@ or deletion. This deliberately permits a missed launch and does not promise exac
 New Fleets start suspended. Orchestrator replicas control polling availability; there is no fleet session cap.
 
 Session Pods are non-root, read-only, use bounded ephemeral storage and mount only their own work-order
-credential. They receive no Kubernetes token. Activation requires a fresh administrator-owned network
+credential. They receive no Kubernetes token. Activation requires an administrator-owned, Fleet/policy-bound network
 conformance report; NetworkPolicy presence alone is insufficient. Cloud identity and environment keys
 remain outside session Pods. Inference targets Anthropic API.
 
@@ -31,13 +31,21 @@ make test-api ENVTEST_VERSION=1.37.0
 ```
 
 On macOS, the API-server suite runs inside an isolated Linux container with no published ports.
-CI also runs unit/race/API tests and cross-builds Linux AMD64/ARM64. Generated CRDs, RBAC and DeepCopy
+PR CI runs unit/race tests, the Kubernetes 1.33 API suite, both Go target checks and AMD64 image scans.
+Main and release CI expand API coverage to 1.36/1.37 and image scans to ARM64. Generated CRDs, RBAC and DeepCopy
 code come from Go markers. `make package` produces the raw installation and Helm resources from the
 same Kustomize source. Do not hand-edit generated files.
 
-Build the manager and hook with `docker build --target manager` / `--target hook`. The
-[vendor runtime candidate](images/runtime/README.md) is a separate private build with signed manifest
-verification. No runtime images have been published by this repository.
+Build the manager and hook with `docker build --target manager` / `--target hook`.
+These images contain original dependency/toolchain notices. Version tags on reviewed `main` history run
+[operator release CI](.github/workflows/release.yml): source/API/image checks, AMD64/ARM64 images in GHCR
+with SBOM and BuildKit provenance, and a chart plus digest-pinned raw manifests in a GitHub release.
+No release has been published or this publishing path exercised yet. See the [release guide](wiki/workflows/release-candidates.md).
+
+The Claude runtime is a separate image supplied by the administrator. The
+[private runtime candidate](images/runtime/README.md) is optional development work, tested by a separate
+path-filtered workflow. Its unresolved vulnerabilities block acceptance of that runtime; they do not
+become findings in the manager/hook images. Neither workflow publishes Anthropic binaries.
 
 ## Installation candidate
 
@@ -55,10 +63,14 @@ Replace the placeholder image in `config/install` before using raw manifests. Ke
 the installation, proxy/network and dedicated vendor acceptance checks pass. The chart does not create
 external Claude environments, organization settings or cloud credentials.
 
-Installing the operator does not require KMS or a release-signing key. Publisher CI owns release
-signing; installers verify its trusted identity and use pinned images. Anthropic credentials are
-supplied through namespace Secret references, while cert-manager manages webhook TLS. See the
-[signing responsibility guide](wiki/workflows/release-candidates.md).
+Installing the operator does not require KMS or a release-signing key. Network reports have an optional
+administrator-selected expiry; otherwise they remain valid until revoked or the Fleet/execution policy changes.
+Suspend and revalidate after CNI/proxy changes, using `execution.securityRevision` to invalidate old approval.
+
+Publisher CI owns artifact publication; installers use the trusted repository/registry and pinned
+image digests. BuildKit provenance is build metadata, not an independent publisher signature.
+Anthropic credentials use namespace Secret references; cert-manager manages webhook TLS. See the
+[release guide](wiki/workflows/release-candidates.md).
 
 Follow the [installation and drain guide](wiki/operations/install-and-drain.md) before an upgrade or uninstall.
 Uninstalling the manager before draining orders prevents finalizer cleanup. Retained CRDs and namespace

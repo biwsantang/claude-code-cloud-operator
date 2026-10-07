@@ -324,6 +324,83 @@ func TestAPIRecovery(t *testing.T) {
 			t.Fatal("unchanged reconcile rewrote Deployment")
 		}
 	})
+	t.Run("network-approval-policy-revocation-and-optional-expiry", func(t *testing.T) {
+		f, hc, token := fixture(t, "network-approval")
+		cm := &corev1.ConfigMap{}
+		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.NetworkReportRef.Name}, cm))
+		var report contract.Report
+		must(t, json.Unmarshal([]byte(cm.Data["report.json"]), &report))
+		// A reviewed unchanged policy does not need a daily administrative renewal.
+		report.TestedAt = time.Now().Add(-30 * 24 * time.Hour)
+		report.ValidUntil = time.Time{}
+		updateReport := func() {
+			b, err := json.Marshal(report)
+			must(t, err)
+			cm.Data["report.json"] = string(b)
+			must(t, admin.Update(ctx, cm))
+		}
+		updateReport()
+		w := intake(t, f, hc, token, "approved-order")
+		r := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }}
+		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !w.Status.LaunchAttempted {
+			t.Fatal("unchanged approved policy could not launch")
+		}
+		for _, change := range []string{"fleet", "policy", "test", "future", "missing-time", "evidence", "expiry"} {
+			t.Run(change, func(t *testing.T) {
+				updateReport()
+				pending := intake(t, f, hc, token, "pending-"+change)
+				invalid := report
+				switch change {
+				case "fleet":
+					invalid.FleetUID = "another-fleet"
+				case "policy":
+					invalid.PolicyDigest = strings.Repeat("b", 64)
+				case "test":
+					invalid.MetadataDenied = false
+				case "future":
+					invalid.TestedAt = time.Now().Add(time.Hour)
+				case "missing-time":
+					invalid.TestedAt = time.Time{}
+				case "evidence":
+					invalid.Evidence = " "
+				case "expiry":
+					invalid.ValidUntil = time.Now().Add(-time.Minute)
+				}
+				b, err := json.Marshal(invalid)
+				must(t, err)
+				cm.Data["report.json"] = string(b)
+				must(t, admin.Update(ctx, cm))
+				if result := hook.Run(ctx, hc, hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "denied-" + change}, token, time.Now()); result.Code == 0 {
+					t.Fatal("invalid approval permitted intake")
+				}
+				_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(pending)})
+				must(t, err)
+				must(t, manager.Get(ctx, client.ObjectKeyFromObject(pending), pending))
+				if pending.Status.LaunchAttempted {
+					t.Fatal("invalid approval permitted an accepted order to launch")
+				}
+			})
+		}
+		report.ValidUntil = time.Now().Add(7 * 24 * time.Hour)
+		updateReport()
+		intake(t, f, hc, token, "optional-expiry-order")
+		must(t, admin.Delete(ctx, cm))
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		d := &appsv1.Deployment{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, d))
+		if *d.Spec.Replicas != 0 {
+			t.Fatal("revoked approval left polling enabled")
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !w.Status.LaunchAttempted {
+			t.Fatal("revocation changed an already submitted order")
+		}
+	})
 	t.Run("credential-rotation-network-and-unrelated-collision", func(t *testing.T) {
 		f, hc, token := fixture(t, "rotation")
 		w := intake(t, f, hc, token, "order-before-rotation")

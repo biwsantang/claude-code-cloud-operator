@@ -67,6 +67,6 @@ extra-argument entries rather than the older guide's map. Shared-home scratch fi
 container before boot, avoiding Colima's unshared macOS temporary path; Helm configuration/cache are isolated.
 The final evidence must show one successful audited Pod-create request per order before the run can pass.
 
-Review [container vulnerability findings and execution limits](runtime-vulnerability-review.md) before release acceptance.
+Review [container vulnerability findings and execution limits](runtime-vulnerability-review.md) before accepting the optional runtime. Operator release checks are described in the [release guide](../workflows/release-candidates.md).
 
 Review the [curl advisory assessment](curl-advisory-assessment.md) for the eight retained advisory IDs and missing regressions.

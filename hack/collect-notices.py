@@ -116,13 +116,13 @@ def write_inventory(output, sources, metadata):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--directory", required=True, help="new review bundle containing compiled build information")
+    parser.add_argument("--directory", required=True, help="output directory containing compiled build information")
     parser.add_argument("--go", default="go", help="the selected compiler executable")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     output = Path(args.directory).resolve()
     if output.is_relative_to(root) or not output.is_dir():
-        parser.error("candidate directory must exist outside the source worktree")
+        parser.error("notice output directory must exist outside the source worktree")
     go_binary = Path(args.go).resolve() if Path(args.go).is_file() else args.go
     env = {**os.environ, "GOTOOLCHAIN": "local"}
 

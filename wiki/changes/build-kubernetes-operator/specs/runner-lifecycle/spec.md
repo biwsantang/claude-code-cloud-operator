@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:14:43+07:00"
+  at: "2026-10-07T19:32:32+07:00"
 ---
 
 # Delta: runner lifecycle
@@ -18,12 +18,27 @@ generated:
 The operator SHALL manage a namespaced `ClaudeRunnerFleet` with an external environment ID,
 credential reference, pinned images, placement and resource configuration. Unsafe/cross-namespace inputs
 SHALL be rejected; new Fleets SHALL start suspended. It SHALL NOT create external environments automatically.
+Activation SHALL require an administrator-owned network report bound to Fleet UID and execution policy,
+with test time, evidence and every required successful check. Report expiry SHALL be optional and
+administrator-selected; policy changes or removal SHALL revoke approval for new work.
 
 #### Scenario: Missing prerequisite
 
 - **GIVEN** a suspended Fleet with a missing Secret or missing valid network report
 - **WHEN** its administrator requests activation
 - **THEN** no polling/launch is enabled and status identifies the missing prerequisite.
+
+#### Scenario: Approved policy remains unchanged
+
+- **GIVEN** a matching report with no expiry and all required successful tests
+- **WHEN** the policy remains unchanged beyond one day
+- **THEN** intake and launch remain permitted without an administrative daily renewal.
+
+#### Scenario: Approval is revoked or expires
+
+- **GIVEN** an activated Fleet with submitted and unlaunched orders
+- **WHEN** the report is removed, an explicit expiry passes, required checks fail or Fleet/policy binding changes
+- **THEN** new intake and unlaunched orders are blocked while submitted execution retains its lifecycle.
 
 ### Requirement: Supported native intake
 

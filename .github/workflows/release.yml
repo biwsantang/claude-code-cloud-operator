@@ -1,0 +1,147 @@
+name: Release operator
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+        fetch-depth: 0
+    - name: Require a version tag on reviewed main history
+      id: version
+      run: |
+        identifier='(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
+        if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-$identifier(\.$identifier)*)?$ ]]; then
+          echo 'Use a version such as v0.1.0 or v0.1.0-rc.1' >&2
+          exit 1
+        fi
+        git merge-base --is-ancestor HEAD origin/main
+        echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+        if [[ "$RELEASE_TAG" == *-* ]]; then
+          echo 'prerelease=true' >> "$GITHUB_OUTPUT"
+        else
+          echo 'prerelease=false' >> "$GITHUB_OUTPUT"
+        fi
+      env:
+        RELEASE_TAG: ${{ github.ref_name }}
+  verify:
+    needs: prepare
+    uses: ./.github/workflows/test.yml
+  images:
+    needs: [prepare, verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        component: [manager, hook]
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+    - name: Image name
+      id: image
+      run: echo "name=ghcr.io/${REPOSITORY,,}-$COMPONENT" >> "$GITHUB_OUTPUT"
+      env:
+        REPOSITORY: ${{ github.repository }}
+        COMPONENT: ${{ matrix.component }}
+    - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish only project-owned images
+      id: build
+      uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+      with:
+        context: .
+        target: ${{ matrix.component }}
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: |
+          ${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          ${{ steps.image.outputs.name }}:sha-${{ github.sha }}
+        labels: |
+          org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+          org.opencontainers.image.licenses=Apache-2.0
+        provenance: mode=min
+        sbom: true
+    - name: Record immutable image reference
+      run: |
+        mkdir -p release-images
+        jq -n --arg component "$COMPONENT" --arg image "$IMAGE@$DIGEST" \
+          --arg source "$SOURCE_COMMIT" '{component:$component,image:$image,sourceCommit:$source}' \
+          > "release-images/$COMPONENT.json"
+      env:
+        COMPONENT: ${{ matrix.component }}
+        IMAGE: ${{ steps.image.outputs.name }}
+        DIGEST: ${{ steps.build.outputs.digest }}
+        SOURCE_COMMIT: ${{ github.sha }}
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: operator-image-${{ matrix.component }}
+        path: release-images/*.json
+        retention-days: 7
+        if-no-files-found: error
+  package:
+    needs: [prepare, verify, images]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+      with:
+        version: v4.2.3
+    - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+      with:
+        pattern: operator-image-*
+        path: release
+        merge-multiple: true
+    - name: Package chart and digest-pinned raw installation
+      run: |
+        manager=$(jq -r .image release/manager.json)
+        helm lint charts/claude-code-cloud-operator --set-string "managerImage=$manager"
+        helm package charts/claude-code-cloud-operator --version "$VERSION" --app-version "$VERSION" --destination release
+        sed "s#example.invalid/operator@sha256:$(printf '0%.0s' {1..64})#$manager#g" deploy/install.yaml > release/install.yaml
+        cp LICENSE release/LICENSE
+        (cd release && sha256sum ./*.tgz ./*.yaml ./*.json LICENSE > SHA256SUMS)
+        {
+          echo "Manager: \`$manager\`"
+          echo "Hook: \`$(jq -r .image release/hook.json)\`"
+          echo
+          echo 'Images include AMD64/ARM64, dependency notices, SBOM and BuildKit provenance.'
+          echo 'Supply a separately accepted Claude runtime image. New Fleets start suspended.'
+        } > release-notes.md
+      env:
+        VERSION: ${{ needs.prepare.outputs.version }}
+    - name: Create release
+      run: |
+        options=()
+        if [[ "$PRERELEASE" == true ]]; then options+=(--prerelease); fi
+        gh release create "$RELEASE_TAG" release/* --verify-tag --title "$RELEASE_TAG" \
+          --notes-file release-notes.md "${options[@]}"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_TAG: ${{ github.ref_name }}
+        PRERELEASE: ${{ needs.prepare.outputs.prerelease }}

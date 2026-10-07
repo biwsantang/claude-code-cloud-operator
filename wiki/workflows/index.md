@@ -18,7 +18,6 @@ generated:
 5. Archive completed change records through Code Wiki, preserving history.
 
 Keep research links and source timestamps current when beta contracts change. Avoid claims that this independent
-operator is vendor-supported. CI verifies generated parity, Go/API tests, architecture builds and known
-reachable Go vulnerabilities. [Private candidate verification](release-candidates.md) adds compiled-binary
-SBOMs, artifact inventory and signature/tamper checks. Image publishing and production signing are separate.
-Do not grant cloud publishing credentials to documentation checks.
+operator is vendor-supported. [Operator release CI](release-candidates.md) builds and scans manager/hook
+images, adds standard SBOM/provenance and packages the chart/manifests. The optional Claude runtime has
+separate verification and acceptance. No cloud publishing credentials are granted to PR checks.

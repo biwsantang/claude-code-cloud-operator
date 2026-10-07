@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:47:00+07:00"
+  at: "2026-10-07T19:32:32+07:00"
 sources:
   - resource: "https://kubernetes.io/docs/concepts/extend-kubernetes/operator/"
   - resource: "https://book.kubebuilder.io/reference/good-practices"
@@ -144,8 +144,8 @@ The default manager watches one configured namespace. Controller cluster privile
 bootstrap resources; ordinary reconciliation cannot create cluster roles or modify the CNI/nodepool.
 Session users receive no Kubernetes credentials. Treat Fleet writers and image/config publishers as trusted administrators.
 
-Do not infer enforced egress from NetworkPolicy presence. Require a protected, fresh conformance report bound to the
-security revision, invalidate it on changes and block new launches when it expires. Report producer rights must be
+Do not infer enforced egress from NetworkPolicy presence. Require a protected, policy-bound conformance report bound to the
+security revision, invalidate it on changes and block new launches if an optional explicit expiry passes. Report producer rights must be
 separate from untrusted sessions. Existing sessions retain the restrictive boundary. An expired report stops new work;
 it does not kill active sessions. A report is an operator assertion backed by real tests, not portable auto-detection.
 
@@ -171,3 +171,17 @@ verify no active provisioning, install a suspended operator Fleet, run synthetic
 Do not modify existing deployment PRs as part of this planning change.
 Rollback suspends new receipt/launch, drains current Pods and removes operator ownership only after cleanup.
 Never run old and new provisioners concurrently for the same external environment during rollback.
+
+## Simplicity review: release and approval boundaries
+
+Keep the Fleet/WorkOrder split, native polling, immutable credentials, one-submission fence, admission,
+restricted Pod construction and drain/retention. These protect concrete failure and trust boundaries.
+Manager/hook/chart publishing is independent of the optional Claude development runtime. Standard OCI
+SBOM/provenance and image digests replace offline binary bundles and custom inventory signatures.
+
+Network tests remain a deployment responsibility. Reports are required, bound to Fleet UID/execution policy,
+and include successful test evidence. Their administrator may set an expiry; otherwise approval lasts until
+revocation or policy change. Missing/expired/mismatched approval still blocks intake and unlaunched orders.
+CNI/proxy changes require suspension, a securityRevision change and new fresh-Pod tests. The report does
+not continuously detect infrastructure drift. See the [operations](../../operations/install-and-drain.md) and
+[release](../../workflows/release-candidates.md) contracts for current obligations and acceptance limits.

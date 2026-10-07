@@ -197,10 +197,11 @@ func SameReceipt(a, b api.ClaudeWorkOrderSpec) bool {
 }
 
 // Report is an administrator's assertion of externally reproduced network tests, not CNI detection.
+// Approval stays bound to the Fleet and policy until revoked or an optional expiry is reached.
 type Report struct {
 	FleetUID         string    `json:"fleetUID"`
 	PolicyDigest     string    `json:"policyDigest"`
-	ValidUntil       time.Time `json:"validUntil"`
+	ValidUntil       time.Time `json:"validUntil,omitzero"`
 	TestedAt         time.Time `json:"testedAt"`
 	DirectDenied     bool      `json:"directDenied"`
 	PrivateDenied    bool      `json:"privateDenied"`
@@ -224,8 +225,11 @@ func NetworkApproved(ctx context.Context, c client.Reader, f *api.ClaudeRunnerFl
 	if err := json.Unmarshal([]byte(cm.Data["report.json"]), &r); err != nil {
 		return errors.New("network report malformed")
 	}
-	if r.FleetUID != string(f.UID) || r.PolicyDigest != PolicyDigest(f.Spec.Execution) || !r.ValidUntil.After(now) || r.TestedAt.After(now.Add(time.Minute)) || r.TestedAt.Before(now.Add(-24*time.Hour)) || r.ValidUntil.After(r.TestedAt.Add(24*time.Hour)) || r.Evidence == "" || !r.DirectDenied || !r.PrivateDenied || !r.MetadataDenied || !r.KubernetesDenied || !r.ProxyAllowed || !r.ProxyDenied || !r.FreshPodTested {
-		return errors.New("network report stale or does not match the policy and required tests")
+	if r.FleetUID != string(f.UID) || r.PolicyDigest != PolicyDigest(f.Spec.Execution) || r.TestedAt.IsZero() || r.TestedAt.After(now.Add(time.Minute)) || strings.TrimSpace(r.Evidence) == "" || !r.DirectDenied || !r.PrivateDenied || !r.MetadataDenied || !r.KubernetesDenied || !r.ProxyAllowed || !r.ProxyDenied || !r.FreshPodTested {
+		return errors.New("network report does not match the policy and required tests")
+	}
+	if !r.ValidUntil.IsZero() && (!r.ValidUntil.After(now) || !r.ValidUntil.After(r.TestedAt)) {
+		return errors.New("network report has expired or has an invalid expiry")
 	}
 	return nil
 }

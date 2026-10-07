@@ -13,7 +13,7 @@ okf_version: "0.2"
 - [Testing](testing/index.md)
 - [Runtime vulnerability review](testing/runtime-vulnerability-review.md)
 - [Contributor workflow](workflows/index.md)
-- [Private release candidate verification](workflows/release-candidates.md)
+- [Operator releases](workflows/release-candidates.md)
 - [Active operator proposal](changes/build-kubernetes-operator/proposal.md)
 
 There are no accepted implementation specifications yet. Proposed requirements live with the change.

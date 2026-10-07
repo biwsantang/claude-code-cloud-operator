@@ -1,3 +1,11 @@
+# Optional Claude runtime candidate
+
+The operator accepts administrator-supplied digest-pinned runtime images. This candidate is a separate
+maintenance and acceptance track, not a prerequisite to building or releasing the manager/hook/chart.
+Its package patches and security findings are retained rather than hidden by operator CI.
+`.github/workflows/runtime.yml` runs on runtime changes or manual dispatch and never publishes this image.
+A production Fleet still requires an accepted runtime, enforced egress and real Claude session tests.
+
 Build this candidate privately with `docker build -f images/runtime/Dockerfile -t claude-cloud-runtime:dev .`.
 The build checks Anthropic's signing-key fingerprint, detached manifest signature and pinned architecture checksum.
 Native version is 2.1.285. Base images and the Debian package snapshot are pinned; updates require a tested PR.
