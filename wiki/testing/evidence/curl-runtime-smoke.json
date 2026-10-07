@@ -245,8 +245,8 @@
   },
   "originalUpstreamLicenseSHA256": "82f2f4427d6545ee5aaac4f0b80428da6cc8ba41c2cf5da3a03680ec327b9681",
   "arm64NativeFullSmokePassed": true,
-  "amd64NativeFullSmokePassed": false,
-  "amd64HardwareCIPending": true,
+  "amd64NativeFullSmokePassed": true,
+  "amd64HardwareCIPending": false,
   "baselineProbes": {
     "imageEvidence": "openssh-runtime-smoke.json",
     "rawLogSHA256": "c9e080fb9671f9266977ffa32fd3c69339dc981dc692df6ca49f01a0b0a9fff9",
@@ -314,5 +314,121 @@
       "classification": "unchanged public OpenSSH signer/archive/binary hashes, independently matched to prior evidence",
       "redactedReportSHA256": "252af705dc8deb7b2505ef6593ee65a8d07bbb3ff5b77d946c352e45487a7284"
     }
-  }
+  },
+  "nativeAMD64CI": {
+    "runURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37614758051",
+    "jobURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37614758051/job/112770303228",
+    "headCommit": "033c4e2bbf6d842385503957d0d947622a19d0d0",
+    "testedMergeCommit": "c5e56535af92d453c6d832dcf39e7d1de570173b",
+    "mergeParents": [
+      "7ed453e9ee70aba9a3c36c1755a846dfbbd25c02",
+      "033c4e2bbf6d842385503957d0d947622a19d0d0"
+    ],
+    "recordedSourceFileCount": 13,
+    "recordedSourceFilesMatchTestedMerge": true,
+    "imageArchitecture": "amd64",
+    "jobConclusion": "failure",
+    "steps": {
+      "build": "success",
+      "fullRestrictedSDKSmoke": "success",
+      "criticalThresholdScan": "failure",
+      "privateMetadataUpload": "success"
+    },
+    "logSHA256": "302d777b7a0e914a49d823bd490883e71a452dec9a0a18c62e162ba136ddebd9",
+    "privateArtifact": {
+      "id": 11479629296,
+      "name": "runtime-amd64-inventory",
+      "retentionDays": 7,
+      "githubReportedArchiveDigest": "sha256:aa02083d441689b33d21a60fe65f42fdd2cc7fd60b0c9b36382e3d259ff89d38",
+      "archiveDigestIndependentlyVerified": false,
+      "summarySHA256": "80ccee03eda33e7c452f407e5d8fb35cb10f53ec032c1f4551fe9754cce9d1e8"
+    },
+    "scan": {
+      "recordedAt": "2026-10-07T11:39:18.634241+00:00",
+      "sourceCommit": "c5e56535af92d453c6d832dcf39e7d1de570173b",
+      "sourceDirty": false,
+      "imageConfigID": "sha256:934d3267f318849100f795269d44c82aeb56884424ca3fc9e4bd83f2f17021a6",
+      "tools": {
+        "grype": {
+          "version": "0.120.1",
+          "executableSHA256": "d6e3248b0e788b4da7450a9e03d1e72811771cf97de3640a18e6517bf6507eb7",
+          "archiveSHA256": "0a9ee97ef5ae2ee953b0a80098105052e846cdbe319a57d808b519c33cd1343d"
+        },
+        "syft": {
+          "version": "1.54.1",
+          "executableSHA256": "dbf75864e7a7ff9e1fbf00552c31483f693188632a9f68f343cd7653dac513d6",
+          "archiveSHA256": "c069905b391cc4c20a5ba65ad5c10be2a7ba074f8ea6ad203e24d14e303dad47"
+        }
+      },
+      "databaseStatus": {
+        "schemaVersion": "v6.1.10",
+        "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+        "built": "2026-10-07T06:31:48Z",
+        "valid": true
+      },
+      "scope": "squashed",
+      "userIgnoreRules": [],
+      "ignoredMatchCount": 0,
+      "effectiveDefaultKernelHeaderRules": [
+        {
+          "name": "kernel-headers",
+          "version": "",
+          "language": "",
+          "type": "rpm",
+          "location": "",
+          "upstream-name": "kernel"
+        },
+        {
+          "name": "linux(-.*)?-headers-.*",
+          "version": "",
+          "language": "",
+          "type": "deb",
+          "location": "",
+          "upstream-name": "linux.*"
+        },
+        {
+          "name": "linux-libc-dev",
+          "version": "",
+          "language": "",
+          "type": "deb",
+          "location": "",
+          "upstream-name": "linux"
+        },
+        {
+          "name": "linux-kbuild-.*",
+          "version": "",
+          "language": "",
+          "type": "deb",
+          "location": "",
+          "upstream-name": "linux.*"
+        }
+      ],
+      "matchesBySeverity": {
+        "Critical": 24,
+        "High": 98,
+        "Medium": 68,
+        "Low": 10,
+        "Negligible": 95,
+        "Unknown": 1
+      },
+      "criticalGateExitCode": 2,
+      "criticalGatePassed": false,
+      "sbomArtifactCount": 280,
+      "rawReportSHA256": "b19bc53f20c3a22c744ac38a2f4f99d2ab49433c52e955bf45d17783fd4b722b",
+      "rawSBOMSHA256": "b4186ff8d618b45f72449cc4ec05a521d992c348a94b24066381d653b602e791",
+      "releaseApproved": false,
+      "vendorAcceptancePassed": false,
+      "published": false
+    },
+    "workflowConclusion": "failure",
+    "otherJobConclusions": {
+      "unit": "success",
+      "api (1.33.0)": "success",
+      "api (1.36.0)": "success",
+      "api (1.37.0)": "success",
+      "vulnerability (amd64)": "success",
+      "vulnerability (arm64)": "success"
+    }
+  },
+  "nativeAMD64EvidenceRecordedAt": "2026-10-07T18:42:59+07:00"
 }

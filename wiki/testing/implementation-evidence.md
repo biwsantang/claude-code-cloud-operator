@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:30:01+07:00"
+  at: "2026-10-07T18:42:59+07:00"
 ---
 
 # Implementation evidence
@@ -314,13 +314,17 @@ The GnuTLS CLI preserves HTTP/3; upstream protocol removals and TLS-backend chan
 concerns. Both old variants reproduce proxy-credential clearing/netrc user leakage, and both new variants
 pass the same real API probes with positive controls. Native ARM64 restricted SDK smoke passes actual
 CLI/library CA trust/rejection and Git HTTPS clone/commit/push in an offline disposable container fixture.
-No real vendor Git or Kerberos identity switching is tested. Native AMD64 verification remains pending.
+No real vendor Git or Kerberos identity switching is tested. [Matching native AMD64 SDK smoke passes](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37614758051/job/112770303228).
+The tested PR merge has `033c4e2` as a parent and matches all 13 recorded build/smoke/scan source hashes.
 
 Syft identifies all three custom 8.22.0-operator1 packages, but Grype's Debian `wont-fix` records still
 produce 24 Critical matches with zero ignored matches and exit 2. There is no automatic VEX/waiver or
 ambient-user advisory resolution. CI now downloads pinned scanner tools, enforces that threshold and
 retains only private JSON review metadata, not images/binaries. SDK execution and scan outcomes remain
-separate evidence; task 5.1 is reopened and task 7.3 stays pending.
+separate evidence; task 5.1 is restored and task 7.3 stays pending. The native AMD64 scan also
+reports 24 Critical, 98 High, 68 Medium, 10 Low, 95 Negligible and one Unknown, zero ignored and exit 2.
+Private JSON upload succeeds after that failure. Its exact source/image/tool/database/log/report/SBOM
+bindings are retained in the sanitized evidence; the overall runtime job is failed.
 
 ## External gates
 

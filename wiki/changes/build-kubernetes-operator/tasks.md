@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:15:38+07:00"
+  at: "2026-10-07T18:42:59+07:00"
 ---
 
 # Implementation tasks
@@ -42,7 +42,7 @@ Tasks are checked only when their complete verification passes. External release
 
 ## 5. Runtime and security
 
-- [ ] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
+- [x] 5.1 Build immutable non-root runtime and hook images with pinned native CLI; verification: verified downloads, toolchain/version tests, read-only smoke and updater disabled.
 - [x] 5.2 Generate Pod security/storage/resources and configurable placement; verification: no API/environment key/cloud identity access from sessions and no fleet concurrency cap introduced.
 - [x] 5.3 Establish proxy/egress integration and network acceptance report format; verification: direct/proxied denial and fresh-Pod startup tests on enforced-network clusters, not envtest alone.
 
@@ -105,5 +105,7 @@ AMD64 CI execute the full restricted SSH/SDK smoke. Automated Syft does not iden
 SSH clients; the pinned signed-source/binary record supplements this inventory gap. The ARM64 scan
 retains 24 Critical curl/libcurl matches. Task 7.3 retains runtime vulnerability and release gates.
 
-Task 5.1 is reopened for the upstream curl/libcurl revision until both native architecture SDK/smoke
-checks pass. Source advisory discrepancies, compatibility and runtime release gates remain in task 7.3.
+Task 5.1 passes for the upstream curl/libcurl revision after native ARM64 and matching AMD64 CI
+execute the full restricted SDK/smoke. The AMD64 job separately fails its Critical scan with 24
+matches and retains private SBOM/report metadata; no scan clearance is inferred from SDK execution.
+Source advisory discrepancies, compatibility and runtime release gates remain in task 7.3.

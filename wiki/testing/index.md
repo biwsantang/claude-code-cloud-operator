@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T16:37:11+07:00"
+  at: "2026-10-07T18:44:19+07:00"
 sources:
   - resource: "https://code.claude.com/docs/en/self-hosted-environments-testing"
   - resource: "https://kind.sigs.k8s.io/docs/user/auditing/"
@@ -68,3 +68,5 @@ container before boot, avoiding Colima's unshared macOS temporary path; Helm con
 The final evidence must show one successful audited Pod-create request per order before the run can pass.
 
 Review [container vulnerability findings and execution limits](runtime-vulnerability-review.md) before release acceptance.
+
+Review the [curl advisory assessment](curl-advisory-assessment.md) for the eight retained advisory IDs and missing regressions.
