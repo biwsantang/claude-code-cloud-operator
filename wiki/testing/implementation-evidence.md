@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:42:59+07:00"
+  at: "2026-10-07T18:53:19+07:00"
 ---
 
 # Implementation evidence
@@ -325,6 +325,13 @@ separate evidence; task 5.1 is restored and task 7.3 stays pending. The native A
 reports 24 Critical, 98 High, 68 Medium, 10 Low, 95 Negligible and one Unknown, zero ignored and exit 2.
 Private JSON upload succeeds after that failure. Its exact source/image/tool/database/log/report/SBOM
 bindings are retained in the sanitized evidence; the overall runtime job is failed.
+
+The [extended curl regression evidence](evidence/curl-boundary-regression.json) adds identical
+old/new comparisons for Digest origin switching, environment-selected proxy switching, PSL trailing-dot
+cookies and CLI netrc user isolation. Eight disclosure failures reproduce on the old runtime; the current
+runtime passes valid authentication/cookie controls and full restricted native ARM64 SDK smoke.
+These extend behavior evidence to five advisory IDs; matching extended AMD64 execution remains pending.
+The image itself is unchanged and no scan exception or release clearance is introduced.
 
 ## External gates
 

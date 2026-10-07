@@ -9,6 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+import re
 import ssl
 import subprocess
 import sys
@@ -29,12 +30,58 @@ class HTTPFixture(BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.server.observed.append({"path": self.path, "authorization": self.headers.get("Authorization"),
-                                     "proxyAuthorization": self.headers.get("Proxy-Authorization")})
+                                     "proxyAuthorization": self.headers.get("Proxy-Authorization"),
+                                     "host": self.headers.get("Host"), "cookie": self.headers.get("Cookie")})
         self.send_response(200)
         body = b"synthetic-curl-sdk\n"
         self.send_header("Content-Length", str(len(body)))
+        if self.path == "/set-cookie":
+            self.send_header("Set-Cookie", "super=synthetic; Domain=co.uk.; Path=/")
+            self.send_header("Set-Cookie", "legitimate=synthetic; Domain=example.co.uk.; Path=/")
         self.end_headers()
         self.wfile.write(body)
+
+
+class DigestFixture(BaseHTTPRequestHandler):
+    """Validate the synthetic Digest control before testing state isolation."""
+    protocol_version = "HTTP/1.1"
+
+    def log_message(self, *_args):
+        pass
+
+    def do_GET(self):
+        proxy = self.server.is_proxy
+        header = self.headers.get("Proxy-Authorization" if proxy else "Authorization")
+        self.server.observed.append(header)
+        status = 407 if proxy else 401
+        valid = False
+        if header and header.startswith("Digest "):
+            fields = {key: quoted or bare for key, quoted, bare in
+                      re.findall(r'(\w+)=(?:"([^"]*)"|([^,\s]+))', header[7:])}
+            # MD5 is the deliberately selected Digest protocol, not a security hash for artifacts.
+            def digest(value):
+                return hashlib.md5(value.encode(), usedforsecurity=False).hexdigest()
+            username = "synthetic-proxy" if proxy else "synthetic-user"
+            required = {"username": username, "realm": "synthetic-realm", "nonce": "synthetic-nonce",
+                        "qop": "auth"}
+            valid = all(fields.get(key) == value for key, value in required.items())
+            target = urlsplit(self.path)
+            origin_form = target.path + ("?" + target.query if target.query else "")
+            valid = valid and fields.get("uri") in {self.path, origin_form}
+            if valid:
+                a1 = digest(f"{username}:synthetic-realm:synthetic-password")
+                a2 = digest(f"GET:{fields['uri']}")
+                expected = digest(f"{a1}:synthetic-nonce:{fields.get('nc')}:{fields.get('cnonce')}:auth:{a2}")
+                valid = fields.get("response") == expected and bool(fields.get("cnonce"))
+            status = 200 if valid else 403
+        if valid:
+            self.server.authenticated += 1
+        self.send_response(status)
+        if not header:
+            self.send_header("Proxy-Authenticate" if proxy else "WWW-Authenticate",
+                             'Digest realm="synthetic-realm", nonce="synthetic-nonce", algorithm=MD5, qop="auth"')
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
 
 class GitFixture(BaseHTTPRequestHandler):
@@ -73,6 +120,8 @@ def server(handler, context=None):
     instance = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     instance.daemon_threads = True
     instance.observed = []
+    instance.authenticated = 0
+    instance.is_proxy = False
     if context:
         instance.socket = context.wrap_socket(instance.socket, server_side=True)
     thread = threading.Thread(target=instance.serve_forever, daemon=True)
@@ -99,6 +148,10 @@ class Curl:
         self.library.curl_easy_perform.restype = ctypes.c_int
         self.library.curl_easy_setopt.restype = ctypes.c_int
         self.library.curl_version.restype = ctypes.c_char_p
+        self.library.curl_slist_append.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+        self.library.curl_slist_append.restype = ctypes.c_void_p
+        self.library.curl_slist_free_all.argtypes = [ctypes.c_void_p]
+        self.resolves = None
         self.version = self.library.curl_version().decode()
         self.handle = self.library.curl_easy_init()
         assert self.handle
@@ -121,8 +174,16 @@ class Curl:
         self.option(10002, url)  # CURLOPT_URL
         return self.library.curl_easy_perform(ctypes.c_void_p(self.handle))
 
+    def resolve(self, entries):
+        assert self.resolves is None
+        for entry in entries:
+            self.resolves = self.library.curl_slist_append(self.resolves, entry.encode())
+            assert self.resolves
+        self.option(10203, ctypes.c_void_p(self.resolves))  # CURLOPT_RESOLVE
+
     def close(self):
         self.library.curl_easy_cleanup(self.handle)
+        self.library.curl_slist_free_all(self.resolves)
 
 
 def credential_probes(paths, root):
@@ -164,6 +225,122 @@ def credential_probes(paths, root):
     if failures:
         raise AssertionError("; ".join(failures))
     print("PASS: both libcurl variants clear proxy credentials and isolate netrc users")
+
+
+def digest_probes(paths):
+    failures = []
+    first, first_thread = server(DigestFixture)
+    second, second_thread = server(HTTPFixture)
+    proxy_keys = ["http_proxy", "https_proxy", "all_proxy", "no_proxy", "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"]
+    original_env = {key: os.environ.get(key) for key in proxy_keys}
+    try:
+        for backend, path in paths.items():
+            first.is_proxy = False
+            first.authenticated = 0
+            second.observed.clear()
+            client = Curl(path)
+            try:
+                client.option(10177, "*")
+                client.option(107, 2)  # CURLOPT_HTTPAUTH: Digest
+                client.option(10173, "synthetic-user")
+                client.option(10174, "synthetic-password")
+                assert client.perform(f"http://localhost:{first.server_port}/digest") == 0
+                assert first.authenticated == 1, f"{backend}: Digest origin control failed"
+                assert client.perform(f"http://127.0.0.1:{second.server_port}/digest") == 0
+                assert len(second.observed) == 1
+                if second.observed[0]["authorization"] is not None:
+                    failures.append(f"{backend}: origin Digest authorization crossed to another origin")
+            finally:
+                client.close()
+            first.is_proxy = True
+            first.authenticated = 0
+            second.observed.clear()
+            for key in proxy_keys:
+                os.environ.pop(key, None)
+            os.environ["http_proxy"] = f"http://127.0.0.1:{first.server_port}"
+            client = Curl(path)
+            try:
+                client.option(10177, "")
+                client.option(111, 2)  # CURLOPT_PROXYAUTH: Digest
+                client.option(10175, "synthetic-proxy")
+                client.option(10176, "synthetic-password")
+                assert client.perform("http://synthetic.invalid/digest") == 0
+                assert first.authenticated == 1, f"{backend}: Digest proxy control failed"
+                os.environ["http_proxy"] = f"http://127.0.0.1:{second.server_port}"
+                assert client.perform("http://synthetic.invalid/digest") == 0
+                assert len(second.observed) == 1
+                if second.observed[0]["proxyAuthorization"] is not None:
+                    failures.append(f"{backend}: environment-selected proxy received another proxy's Digest authorization")
+            finally:
+                client.close()
+    finally:
+        for key, value in original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+        stop(first, first_thread)
+        stop(second, second_thread)
+    return failures
+
+
+def cookie_and_cli_probes(paths, root):
+    failures = []
+    fixture, thread = server(HTTPFixture)
+    try:
+        port = fixture.server_port
+        entries = [f"{host}:{port}:127.0.0.1" for host in ["example.co.uk.", "other.co.uk."]]
+        for backend, path in paths.items():
+            fixture.observed.clear()
+            client = Curl(path)
+            try:
+                assert "libpsl/" in client.version, f"{backend}: PSL build prerequisite missing"
+                client.option(10177, "*")
+                client.option(10031, "")  # CURLOPT_COOKIEFILE: enable cookie engine
+                client.resolve(entries)
+                assert client.perform(f"http://example.co.uk.:{port}/set-cookie") == 0
+                assert client.perform(f"http://example.co.uk.:{port}/same-host") == 0
+                assert "legitimate=synthetic" in (fixture.observed[-1]["cookie"] or ""), f"{backend}: host cookie control failed"
+                assert client.perform(f"http://other.co.uk.:{port}/other-host") == 0
+                cookies = fixture.observed[-1]["cookie"] or ""
+                assert "legitimate=synthetic" not in cookies
+                if "super=synthetic" in cookies:
+                    failures.append(f"{backend}: trailing-dot public-suffix cookie crossed hosts")
+            finally:
+                client.close()
+        fixture.observed.clear()
+        assert "PSL" in run(["curl", "--version"]).stdout.decode()
+        command = ["curl", "--silent", "--show-error", "--noproxy", "*", "--cookie", ""]
+        for entry in entries:
+            command += ["--resolve", entry]
+        run(command + [f"http://example.co.uk.:{port}/set-cookie", f"http://example.co.uk.:{port}/same-host", f"http://other.co.uk.:{port}/other-host"])
+        assert len(fixture.observed) == 3
+        assert "legitimate=synthetic" in (fixture.observed[1]["cookie"] or ""), "CLI host cookie control failed"
+        cookies = fixture.observed[2]["cookie"] or ""
+        assert "legitimate=synthetic" not in cookies
+        if "super=synthetic" in cookies:
+            failures.append("CLI: trailing-dot public-suffix cookie crossed hosts")
+        netrc = root / "cli.netrc"
+        netrc.write_text("machine 127.0.0.1 login synthetic-a password synthetic-password\n")
+        netrc.chmod(0o600)
+        command = ["curl", "--silent", "--show-error", "--noproxy", "*", "--netrc-optional", "--netrc-file", str(netrc)]
+        run(command + [f"http://synthetic-a@127.0.0.1:{port}/matching"])
+        assert fixture.observed[-1]["authorization"] == "Basic " + base64.b64encode(b"synthetic-a:synthetic-password").decode()
+        run(command + [f"http://synthetic-b@127.0.0.1:{port}/mismatch"])
+        header = fixture.observed[-1]["authorization"]
+        if header and b"synthetic-password" in base64.b64decode(header.split()[1]):
+            failures.append("CLI: mismatched netrc user's password sent")
+    finally:
+        stop(fixture, thread)
+    return failures
+
+
+def boundary_probes(paths, root):
+    failures = digest_probes(paths) + cookie_and_cli_probes(paths, root)
+    if failures:
+        raise AssertionError("; ".join(failures))
+    print("PASS: validated Digest controls and origin/environment-proxy isolation in both libraries")
+    print("PASS: PSL trailing-dot cookie rejection in CLI/both libraries and CLI netrc user isolation")
 
 
 def https_git(paths, root):
@@ -222,7 +399,9 @@ def main():
     multiarch = {"aarch64": "aarch64-linux-gnu", "x86_64": "x86_64-linux-gnu"}[os.uname().machine]
     paths = {"openssl": Path(f"/usr/lib/{multiarch}/libcurl.so.4"), "gnutls": Path(f"/usr/lib/{multiarch}/libcurl-gnutls.so.4")}
     security_only = sys.argv[1:] == ["--security-only"]
-    if not security_only:
+    boundary_only = sys.argv[1:] == ["--boundary-only"]
+    assert not sys.argv[1:] or security_only or boundary_only
+    if not security_only and not boundary_only:
         record = json.loads(Path("/usr/local/share/claude-runtime/curl-build.json").read_text())
         assert record["version"] == "8.22.0" and record["releaseSignerFingerprint"] == "27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2"
         assert hashlib.sha256(Path("/usr/bin/curl").read_bytes()).hexdigest() == record["cliSHA256"]
@@ -242,8 +421,11 @@ def main():
             assert protocol in version.split("Protocols:", 1)[1].splitlines()[0].split(), protocol
     with tempfile.TemporaryDirectory(prefix="curl-sdk-") as directory:
         root = Path(directory)
-        credential_probes(paths, root)
+        if not boundary_only:
+            credential_probes(paths, root)
         if not security_only:
+            boundary_probes(paths, root)
+        if not security_only and not boundary_only:
             https_git(paths, root)
 
 

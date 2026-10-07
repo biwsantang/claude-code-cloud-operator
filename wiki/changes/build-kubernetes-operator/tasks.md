@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:42:59+07:00"
+  at: "2026-10-07T18:53:19+07:00"
 ---
 
 # Implementation tasks
@@ -109,3 +109,9 @@ Task 5.1 passes for the upstream curl/libcurl revision after native ARM64 and ma
 execute the full restricted SDK/smoke. The AMD64 job separately fails its Critical scan with 24
 matches and retains private SBOM/report metadata; no scan clearance is inferred from SDK execution.
 Source advisory discrepancies, compatibility and runtime release gates remain in task 7.3.
+
+Task 7.3 has extended native ARM64 old/new curl comparisons for Digest origin/proxy state, trailing-dot
+PSL cookies and CLI netrc user isolation, supplementing the earlier two library credential regressions.
+The unchanged current image passes the full restricted SDK smoke; matching extended AMD64 CI is pending.
+No scan exception is introduced: HTTP/2 memory regressions, ambient-identity behavior and the 24 Critical
+scanner matches remain review/release gates. See the [advisory assessment](../../testing/curl-advisory-assessment.md).

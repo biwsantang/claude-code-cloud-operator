@@ -6,9 +6,10 @@ tags: [claude-code, runtime, security, curl]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T18:44:19+07:00"
+  at: "2026-10-07T18:53:19+07:00"
 sources:
   - resource: repo://wiki/testing/evidence/curl-runtime-smoke.json
+  - resource: repo://wiki/testing/evidence/curl-boundary-regression.json
   - resource: repo://hack/runtime-curl-smoke.py
   - resource: https://curl.se/docs/CVE-2026-9079.html
   - resource: https://curl.se/docs/CVE-2026-8926.html
@@ -41,13 +42,38 @@ Severity in this table is upstream's assessment; it does not change the scanner'
 | Advisory and upstream severity | Trigger / upstream release claim | Candidate evidence and remaining verification |
 | --- | --- | --- |
 | [CVE-2026-9079](https://curl.se/docs/CVE-2026-9079.html), Medium | Reused libcurl handle retains explicitly cleared proxy credentials. Upstream lists 8.21.0 as fixed; the CLI is exempt. | Both old library variants reproduce credential disclosure; both new variants stop it, with a successful Basic-auth control. Native ARM64 and AMD64 execute this probe. Broader application use is not certified. |
-| [CVE-2026-8926](https://curl.se/docs/CVE-2026-8926.html), Low | URL username without a password can pick another user's netrc password. Applies to CLI and library; upstream lists 8.21.0 as fixed. | Both old library variants disclose the wrong user's synthetic password; both new variants reject that reuse, with a matching-user control. Native ARM64 and AMD64 execute the library probe. A dedicated CLI netrc regression is still missing. |
-| [CVE-2026-11856](https://curl.se/docs/CVE-2026-11856.html), Medium | Reusing a Digest-authenticated easy handle across HTTP origins sends the previous origin's Authorization state. CLI exempt; upstream lists 8.21.0 as fixed. | No Digest origin-switch regression has run. Require two distinct origins, valid initial Digest authentication and observation of the second origin's first request; simple Basic-auth testing does not cover it. |
-| [CVE-2026-8927](https://curl.se/docs/CVE-2026-8927.html), Medium | An environment-selected proxy changes between transfers on a Digest-authenticated handle, leaking Proxy-Authorization state. CLI exempt; upstream lists 8.21.0 as fixed. | No Digest/environment-proxy switch regression has run. Explicitly clearing Basic credentials in CVE-2026-9079 does not exercise this path. |
-| [CVE-2026-8924](https://curl.se/docs/CVE-2026-8924.html), Low | Trailing-dot domains bypass PSL rejection of overly broad cookies. Applies to CLI and library; upstream lists 8.21.0 as fixed. | No cookie/PSL regression has run. Require PSL-enabled binaries, a trailing-dot public-suffix cookie rejection and a legitimate host-cookie positive control. Feature listing alone is insufficient. |
+| [CVE-2026-8926](https://curl.se/docs/CVE-2026-8926.html), Low | URL username without a password can pick another user's netrc password. Applies to CLI and library; upstream lists 8.21.0 as fixed. | Both old library variants disclose the wrong user's synthetic password; both new variants reject that reuse, with a matching-user control. Native ARM64 and AMD64 execute the library probe. The dedicated CLI netrc probe now reproduces disclosure in the old CLI and passes in the new CLI with a matching-user control on native ARM64; extended AMD64 verification is pending. |
+| [CVE-2026-11856](https://curl.se/docs/CVE-2026-11856.html), Medium | Reusing a Digest-authenticated easy handle across HTTP origins sends the previous origin's Authorization state. CLI exempt; upstream lists 8.21.0 as fixed. | Both old variants disclose state to a second origin; both new variants withhold it on native ARM64. The server validates the initial synthetic Digest response and observes the second origin's first request. Extended AMD64 verification is pending. |
+| [CVE-2026-8927](https://curl.se/docs/CVE-2026-8927.html), Medium | An environment-selected proxy changes between transfers on a Digest-authenticated handle, leaking Proxy-Authorization state. CLI exempt; upstream lists 8.21.0 as fixed. | Both old variants disclose state after `http_proxy` changes on the same handle; both new variants withhold it on native ARM64. The first proxy validates actual Digest authentication. Extended AMD64 verification is pending. |
+| [CVE-2026-8924](https://curl.se/docs/CVE-2026-8924.html), Low | Trailing-dot domains bypass PSL rejection of overly broad cookies. Applies to CLI and library; upstream lists 8.21.0 as fixed. | The old CLI and both libraries send a `co.uk.` cookie to an unrelated host; the new CLI and both libraries reject it on native ARM64. PSL is required and legitimate host-cookie controls pass. Extended AMD64 verification is pending. |
 | [CVE-2026-10536](https://curl.se/docs/CVE-2026-10536.html), Low | Setting HTTP/2 stream dependencies, resetting and cleaning up a handle can access freed memory. CLI exempt; upstream lists 8.21.0 as fixed by making those options no-ops. | No instrumented reproducer has run. Upstream identifies ASan/Valgrind or debug assertions as useful detectors. A normal cleanup that happens not to crash is insufficient evidence; the API behavior change also needs compatibility review. |
 | [CVE-2026-18924](https://curl.se/docs/CVE-2026-18924.html), Low | Accepted HTTPS HTTP/2 server push combined with connection sharing can cause cleanup use-after-free. CLI exempt; upstream lists 8.22.0 as fixed. | No accepted-push/shared-connection reproducer or instrumented verification has run. A normal Git HTTPS fixture does not enable these conditions. |
 | [CVE-2026-19931](https://curl.se/docs/CVE-2026-19931.html), Medium | Blank Negotiate credentials select an ambient identity; reusing a connection after that identity changes can authenticate as the previous user. Upstream lists 8.22.0 as unaffected. | The release claim conflicts with source/history and current application guidance. No real GSSAPI identity-switch regression has run. Keep unresolved; do not classify it from the version string. |
+
+## Offline boundary regression evidence
+
+The [extended fixture evidence](evidence/curl-boundary-regression.json) binds the updated script,
+old/new image identities, actual CLI/library versions and comparison logs. The unchanged old 8.14.1
+runtime reproduces eight failures across the three additional advisory behaviors and CLI netrc path;
+the 8.22.0 runtime passes the identical fixture and full restricted ARM64 SDK smoke. This supplements
+the prior two credential regressions: five advisory IDs now have behavior-specific evidence.
+
+Digest controls validate a response calculated from the synthetic username/password, realm, nonce,
+request target, nonce count and client nonce before testing reuse. The second origin/proxy returns
+success without an auth challenge so its first incoming header exposes preemptive disclosure.
+Cookie probes map both trailing-dot domains to loopback in the libcurl resolver and CLI; a legitimate
+host-scoped cookie remains usable but never crosses to the unrelated host. All servers live inside
+a network-disabled Linux container with no published host ports. Credentials and domains are synthetic;
+no account, vendor endpoint or production repository is accessed.
+
+Reproduce only the extended boundary comparison on either image with
+`python3 /checks/runtime-curl-smoke.py --boundary-only`, mounting the script read-only and retaining
+the full runtime smoke's non-root/read-only/network-disabled posture. Ordinary
+`sh hack/runtime-smoke.sh IMAGE PLATFORM` includes both older and new regression groups automatically,
+so native AMD64 CI will execute them. The initial fixture incorrectly required an absolute proxy
+Digest URI; it was corrected to validate the actual request's absolute or origin form before any
+baseline failure was attributed to the libraries. Baseline and candidate evidence use this identical
+corrected control.
 
 ## Ambient identity disagreement
 

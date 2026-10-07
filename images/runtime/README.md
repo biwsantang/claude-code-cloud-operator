@@ -24,7 +24,9 @@ Curl and both libcurl variants use verified upstream 8.22.0 source, packaged pri
 GnuTLS namespace and SONAME are retained for Git compatibility. The CLI uses GnuTLS to retain HTTP/3;
 upstream removed OpenSSL-QUIC, RTMP and TLS-SRP. Original licenses and a source/binary build record
 are retained at `/usr/local/share/claude-runtime/curl-build.json`. Real credential-boundary probes and
-offline Git HTTPS smoke support this update, but the Critical scan gate still fails. CI retains private
+offline Git HTTPS smoke support this update. Comparison fixtures cover explicit credential clearing,
+netrc users, Digest origin/environment-proxy switching and trailing-dot PSL cookies, with valid
+authentication/cookie controls. The Critical scan gate still fails. CI retains private
 SBOM/scan metadata and enforces that threshold; it never publishes the image.
 
 No vendor runtime image is published by CI. The operator's Apache-2.0 license does not license the vendor binary.
