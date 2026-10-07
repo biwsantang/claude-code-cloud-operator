@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:43:50+07:00"
+  at: "2026-10-07T14:05:45+07:00"
 ---
 
 # Implementation evidence
@@ -30,6 +30,7 @@ follow the PR checks for the latest revision.
 | Lifecycle | Suspension gates an unlaunched order; running Pods survive expiry; drain and explicit Abort survive controller replacement, preserve unrelated Pods and diagnostic retention. Abandoned partial intake cleans up without submission; expired completed redelivery does not recreate a Secret. | Pending startup tests cover never-started deletion, a fresh read observing Running, and a resourceVersion conflict when Running races with DELETE. Retention caps and projected service-account token refresh pass. Active vendor drain remains pending. |
 | Sanitized observations | API tests verify receipts/events do not contain synthetic JWTs and Fleet terminal counts survive Pod removal; metrics unit tests exclude private UID labels. | Infrastructure observations only; vendor outcomes remain unknown. |
 | Fleet convergence | Repeated unchanged reconciles preserve Deployment resourceVersion. | Kind 1.37 installed admission is ready; hook/session/manager namespace permission checks deny unauthorized access. |
+| Native connection probe | Synthetic transport tests cover connected/disconnected/missing state, 401/503, transport/read errors, malformed/trailing/oversized JSON, body closure and redirect rejection. The request remains local and bounded to two seconds. | Does not prove native revoked-key behavior or actual vendor connection. Task 2.3 retains that acceptance gate. |
 | Hook runtime | AMD64 and ARM64 images install the hook under a read-only root with UID 1000 within the configured 32Mi hook volume. Reproduce with `sh hack/hook-smoke.sh IMAGE PLATFORM`. | AMD64 ran through QEMU on an ARM64 host; it is not a native AMD64-host test. |
 | Vendor runtime | AMD64 and ARM64 private images verify signing-key fingerprint, manifest signature and binary checksum. Read-only UID 1000 smoke prints Claude 2.1.285, Node 24.21.0, Python 3.11.2 and git 2.39.5; required flags exist. | Reproduce with `sh hack/runtime-smoke.sh IMAGE PLATFORM`. AMD64 ran through QEMU. Real registration, session turns and git push remain unverified. |
 | Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm and raw install/update/admission/suspended-Fleet drain/removal pass on kind 1.33.1, 1.36.4 and 1.37.0 with the clock-fix build. The loaded OCI index matches the requested digest. CRDs and administrator namespace remain; active vendor drain is pending. |
@@ -53,6 +54,17 @@ permissions, not only generator exit status. The manager must register handlers 
 `mgr.GetWebhookServer()` so controller-runtime adds the server to its runnable lifecycle.
 
 ## Clock translation recovery
+
+Private hook builds from clock-fix source `938d9eb` passed `hack/hook-smoke.sh` on both platforms:
+
+| Platform | OCI index digest | Architecture manifest digest |
+| --- | --- | --- |
+| linux/amd64 | `sha256:34ea7a982dd8ac0c569d3b36b748ef2be31032e17b207aaee1a4dd4d617dbb29` | `sha256:6be3efde5c4e5d533e0d9f0ea09a0f42028301427d71cf02f7136d46faac48b1` |
+| linux/arm64 | `sha256:1e534a387c13ed3335d30fa4e0c14239667a4a4a096c2af8a91696abf4c0a284` | `sha256:f39911cc00687860ccf97a7cfa6cc4f250b8b1302b5a6ba570b46dca6869bff7` |
+
+Docker image inspection matches these index digests. Both install the hook with UID 1000, a read-only
+root, all capabilities dropped and no new privileges into the 32Mi hook volume. AMD64 uses QEMU.
+These pins identify that source revision; subsequent hook changes require their own build evidence.
 
 The native poll HTTP Date determines token lifetime when present. Signed `expiresAt` remains unchanged;
 `clockOffsetSeconds` captures local-minus-server time once, bounded to ±3600 seconds. Admission and launch

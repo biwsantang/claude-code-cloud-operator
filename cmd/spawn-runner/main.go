@@ -76,19 +76,34 @@ func install() {
 
 // Probe is local and bounded. It exposes only native connected, never the native error body.
 func probe() {
-	c := http.Client{Timeout: 2 * time.Second}
+	if !nativeConnected(nativeProbeClient()) {
+		os.Exit(1)
+	}
+}
+
+func nativeProbeClient() *http.Client {
+	return &http.Client{Timeout: 2 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+}
+
+func nativeConnected(c *http.Client) bool {
 	resp, err := c.Get("http://127.0.0.1:8080/healthz")
 	if err != nil {
-		os.Exit(1)
+		return false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		os.Exit(1)
+		return false
+	}
+	// Read the extra byte to distinguish a bounded body from a valid JSON prefix
+	// followed by an oversized response. Unmarshal rejects trailing JSON too.
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 4097))
+	if err != nil || len(body) > 4096 {
+		return false
 	}
 	var b struct {
 		Connected bool `json:"connected"`
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&b); err != nil || !b.Connected {
-		os.Exit(1)
-	}
+	return json.Unmarshal(body, &b) == nil && b.Connected
 }

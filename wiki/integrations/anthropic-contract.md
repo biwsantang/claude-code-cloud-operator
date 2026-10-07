@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:14:43+07:00"
+  at: "2026-10-07T14:05:45+07:00"
 sources:
   - resource: "https://code.claude.com/docs/en/self-hosted-environments"
   - resource: "https://code.claude.com/docs/en/self-hosted-environments-quickstart"
@@ -20,6 +20,9 @@ sources:
   - resource: "https://book.kubebuilder.io/reference/good-practices"
   - resource: "https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/"
   - resource: "https://kubernetes.io/docs/concepts/security/secrets-good-practices/"
+  - resource: "https://code.claude.com/docs/en/legal-and-compliance"
+  - resource: "https://www.anthropic.com/legal/commercial-terms"
+  - resource: "https://raw.githubusercontent.com/anthropics/claude-code/main/LICENSE.md"
 ---
 
 # Contract research
@@ -58,12 +61,35 @@ unknown API outcomes and cleanup races. No prototype source is copied into this 
 
 ## Unknowns and implementation decisions still to validate
 
-- Select tested Claude, Go, Kubebuilder and Kubernetes versions during implementation; pin versions and image digests.
+- Promote the tested candidate versions below into a reviewed release support matrix; exact test results do not establish universal production compatibility.
 - Confirm work-order expiry/token-format fixtures against the pinned binary without logging live credentials.
 - Measure hook-to-registration p99 with real scheduling and image-pull delays before choosing the lease.
 - Validate suspend/drain and replica-rollout behavior against native polling, including outstanding hooks.
 - Test direct-Pod registration, signal shutdown and retention on real supported clusters.
 - Decide whether managed egress proxy packaging belongs in the first release or needs an external integration.
-- Review the project's license before any later source import or public release; no license is selected yet.
+- Review vendor runtime distribution and public naming before release. Repository-owned source uses Apache-2.0; this does not license the vendor binary.
 
 The [native spawn-hook contract](https://code.claude.com/docs/en/self-hosted-environments-configuration#the-spawn-runner-hook) supplies the poll response's HTTP Date as `CLAUDE_RUNNER_ORDER_SERVER_TIME` and asks hooks to use it for JWT expiry checks. The operator retains the signed expiry plus a bounded immutable local-minus-server offset, preserving that basis through admission, launch and partial retries. This is lifetime bookkeeping; the native runner validates registration credentials.
+
+## Candidate pins and distribution review
+
+| Component | Current candidate | Evidence boundary |
+| --- | --- | --- |
+| Repository source | Apache-2.0, root `LICENSE` and source notices | Independent implementation; no vendor binary relicensing. |
+| Go / Kubebuilder | 1.27.1 / 4.16.0 | `go.mod`, `PROJECT`, cross-build CI. |
+| controller-runtime / Kubernetes libraries | 0.25.2 / 0.37.1 | Locked module checks and race/API tests. |
+| Kubernetes | API 1.33.0, 1.36.0, 1.37.0; installed 1.33.1, 1.36.4, 1.37.0 | Exact tested candidates; [dependency limits and evidence](../testing/implementation-evidence.md). |
+| Native Claude | 2.1.285 | Signed manifest and architecture checksums; private AMD64/ARM64 runtime smoke. Real registration remains pending. |
+
+[Anthropic's legal documentation](https://code.claude.com/docs/en/legal-and-compliance#can-customers-offer-claude-code-in-their-products)
+permits product preinstallation subject to Commercial Terms and stated conditions: preserve the published
+binary and authentication methods, and do not intermediate or resell end-user usage. It also restricts use
+of Anthropic/Claude Code names in product or feature names. The vendor repository's
+[license notice](https://raw.githubusercontent.com/anthropics/claude-code/main/LICENSE.md) reserves its rights;
+[Commercial Terms](https://www.anthropic.com/legal/commercial-terms) do not implicitly grant other intellectual-property rights.
+
+The release policy is to keep runtime builds private and publish no vendor-containing artifacts until the
+intended distribution, authentication/billing model and public name are reviewed against applicable terms
+or a separate agreement. The requested repository name remains unchanged and the repository remains private.
+Publishing independently licensed manager/hook source does not resolve the vendor-runtime review.
+Record the reviewer, applicable agreement and artifact scope before selecting release pins; task 1.2 stays pending.

@@ -6,13 +6,14 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T11:59:38+07:00"
+  at: "2026-10-07T14:05:45+07:00"
 ---
 
 # Operations plan
 
-Installation is proposed only. A future release should provide CRDs, namespaced RBAC, manager manifests,
-examples and a chart; cluster-scoped CRD installation requires a cluster administrator.
+The candidate provides generated CRDs, namespaced RBAC, manager manifests, suspended examples and a chart.
+See the [installation/drain guide](install-and-drain.md) and [exact tested matrix](../testing/implementation-evidence.md).
+Release and vendor acceptance remain pending; cluster-scoped CRD installation requires a cluster administrator.
 Start with one manager installation watching one explicit namespace. Multiple namespaces need separate,
 reviewed RBAC and independent fleet environments; multi-cluster coordination is outside the MVP.
 
