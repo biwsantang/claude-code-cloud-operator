@@ -6,7 +6,7 @@ tags: [claude-code, release, supply-chain]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T19:32:32+07:00"
+  at: "2026-10-07T19:44:02+07:00"
 sources:
   - resource: repo://.github/workflows/release.yml
   - resource: repo://.github/workflows/test.yml
@@ -50,8 +50,9 @@ for Linux AMD64/ARM64. Version and source-commit tags identify the release; reco
 installation identity. It includes standard SBOM/BuildKit provenance and original dependency/compiler
 notices inside each image. [Docker attestation documentation](https://docs.docker.com/build/ci/github-actions/attestations/)
 
-It then packages the chart with the tag's version/appVersion, substitutes the manager digest into raw
-installation manifests and creates the GitHub release with image references, LICENSE and SHA256SUMS.
+It then packages the chart with the tag's version/appVersion and manager digest as its default image,
+substitutes that digest into raw installation manifests and creates the GitHub release with image
+references, LICENSE and SHA256SUMS.
 No standalone binary matrix or custom signed inventory is distributed. GHCR uses the repository's scoped
 `GITHUB_TOKEN`; no cloud account, KMS or manually managed release key is required.
 [GitHub publishing documentation](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)

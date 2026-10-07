@@ -121,7 +121,9 @@ jobs:
     - name: Package chart and digest-pinned raw installation
       run: |
         manager=$(jq -r .image release/manager.json)
-        helm lint charts/claude-code-cloud-operator --set-string "managerImage=$manager"
+        sed "s#^managerImage:.*#managerImage: \"$manager\"#" charts/claude-code-cloud-operator/values.yaml > /tmp/release-values.yaml
+        mv /tmp/release-values.yaml charts/claude-code-cloud-operator/values.yaml
+        helm lint charts/claude-code-cloud-operator
         helm package charts/claude-code-cloud-operator --version "$VERSION" --app-version "$VERSION" --destination release
         sed "s#example.invalid/operator@sha256:$(printf '0%.0s' {1..64})#$manager#g" deploy/install.yaml > release/install.yaml
         cp LICENSE release/LICENSE

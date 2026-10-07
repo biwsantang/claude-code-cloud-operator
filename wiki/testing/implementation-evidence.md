@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T19:32:32+07:00"
+  at: "2026-10-07T19:44:02+07:00"
 ---
 
 # Implementation evidence
@@ -358,7 +358,8 @@ passes with a non-root UID, read-only root and the 32Mi hook volume. Both images
 module/toolchain notice files. The manager's restricted offline help path runs. The exact release tag
 guard accepts valid stable/prerelease tags and rejects malformed tags, leading-zero numeric prereleases
 and commits outside main history. The exact packaging step passes chart lint/package with version/appVersion,
-substitutes an actual local manager digest into raw installation and verifies all SHA256SUMS. Actionlint,
+includes an actual local manager digest in the chart defaults and raw installation and verifies all
+SHA256SUMS. Helm renders the packaged chart without image overrides. Actionlint,
 workflow YAML parsing and local Markdown/wiki checks pass.
 
 Redacted Gitleaks returns five generic-key matches in unchanged runtime/evidence files: one public
