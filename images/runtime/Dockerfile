@@ -9,6 +9,8 @@ RUN printf '%s\n' 'deb [check-valid-until=no] https://snapshot.debian.org/archiv
     rm /etc/apt/sources.list.d/debian.sources && apt-get -o APT::Update::Error-Mode=any update && \
     apt-get install -y --no-install-recommends ca-certificates curl git python3 python3-venv ripgrep bash openssh-client && \
     apt-get clean && mkdir -p /workspace /home/runner /etc/claude && chown -R 1000:1000 /workspace /home/runner
+COPY images/runtime/install-npm.sh /tmp/install-npm.sh
+RUN sh /tmp/install-npm.sh && rm /tmp/install-npm.sh
 FROM tools AS native
 ARG TARGETARCH
 RUN apt-get install -y --no-install-recommends gnupg jq

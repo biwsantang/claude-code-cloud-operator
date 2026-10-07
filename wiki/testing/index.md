@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T14:33:23+07:00"
+  at: "2026-10-07T16:37:11+07:00"
 sources:
   - resource: "https://code.claude.com/docs/en/self-hosted-environments-testing"
   - resource: "https://kind.sigs.k8s.io/docs/user/auditing/"
@@ -66,3 +66,5 @@ The [v1beta4 kubeadm API](https://kubernetes.io/docs/reference/config-api/kubead
 extra-argument entries rather than the older guide's map. Shared-home scratch files are checked inside a
 container before boot, avoiding Colima's unshared macOS temporary path; Helm configuration/cache are isolated.
 The final evidence must show one successful audited Pod-create request per order before the run can pass.
+
+Review [container vulnerability findings and execution limits](runtime-vulnerability-review.md) before release acceptance.

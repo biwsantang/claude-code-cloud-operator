@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:23:00+07:00"
+  at: "2026-10-07T16:37:11+07:00"
 ---
 
 # Documentation map
@@ -30,3 +30,5 @@ Review [implementation evidence](testing/implementation-evidence.md) and the
 
 - [Operator practices and community lessons](integrations/operator-practices.md)
 - [Private candidate builds and verification](workflows/release-candidates.md)
+
+- [Runtime vulnerability findings and execution limits](testing/runtime-vulnerability-review.md)

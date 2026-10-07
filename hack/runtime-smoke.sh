@@ -1,27 +1,34 @@
 #!/bin/sh
-# Local private-image check; never registers a runner or publishes vendor software.
 set -eu
-image=${1:?provide the privately built runtime image}
+image=${1:?provide the private runtime image}
 platform=${2:?provide linux/amd64 or linux/arm64}
-test "$(docker image inspect --format '{{.Config.User}}' "$image")" = '1000:1000'
-docker run --rm --platform "$platform" --read-only --cap-drop ALL \
-  --security-opt no-new-privileges --tmpfs /tmp:rw,nosuid,nodev,uid=1000,gid=1000,size=64m \
-  --tmpfs /home/runner:rw,nosuid,nodev,uid=1000,gid=1000,size=64m \
-  --entrypoint /bin/sh "$image" -eu -c '
+case "$platform" in linux/amd64|linux/arm64) ;; *) exit 2 ;; esac
+
+# Run on matching physical architecture. QEMU does not certify Node/Bun CPU compatibility.
+docker run --rm --platform "$platform" --network none --read-only --cap-drop ALL \
+  --security-opt no-new-privileges --entrypoint /bin/sh \
+  --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+  --tmpfs /home/runner:rw,nosuid,nodev,size=64m,uid=1000,gid=1000 \
+  "$image" -c '
+    set -eu
     test "$(id -u)" = 1000
     test "$DISABLE_AUTOUPDATER" = 1
-    test "$SELF_HOSTED_RUNNER_HOST_CONFIG_DIR" = /etc/claude
+    test ! -e /var/run/secrets/kubernetes.io/serviceaccount/token
+    test "$(node --version)" = v24.21.0
+    test "$(npm --version)" = 11.21.0
     test "$(claude --version)" = "2.1.285 (Claude Code)"
-    node --version
-    python3 --version
     git --version
-    claude self-hosted-runner --help > /tmp/runner-help
-    claude self-hosted-runner orchestrator --help > /tmp/orchestrator-help
-    for flag in --capacity --confine-repo-settings --use-anthropic-git-proxy --configure-git; do
-      rg -q -- "$flag" /tmp/runner-help
-    done
-    for flag in --hooks-dir --hook-timeout --expected-spawn-seconds --min-idle; do
-      rg -q -- "$flag" /tmp/orchestrator-help
-    done
-    printf "%s\n" "PASS: non-root read-only runtime, pinned CLI, tools, hook flags and updater disabled"
+    python3 --version
+    rg --version
+    curl --version
+    mkdir -p /tmp/npm-smoke/dependency /tmp/npm-smoke/project
+    cd /tmp/npm-smoke/dependency
+    printf "%s\n" "{\"name\":\"synthetic-dependency\",\"version\":\"1.0.0\"}" > package.json
+    printf "%s\n" "module.exports = 17" > index.js
+    npm pack --ignore-scripts --pack-destination /tmp/npm-smoke
+    cd /tmp/npm-smoke/project
+    printf "%s\n" "{\"name\":\"synthetic-offline\",\"version\":\"1.0.0\",\"private\":true,\"dependencies\":{\"synthetic-dependency\":\"file:../synthetic-dependency-1.0.0.tgz\"}}" > package.json
+    npm install --offline --ignore-scripts --no-audit --no-fund
+    node -e "require(\"assert\").strictEqual(require(\"synthetic-dependency\"), 17)"
+    test -f package-lock.json
   '

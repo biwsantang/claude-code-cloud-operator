@@ -5,6 +5,16 @@ on:
 permissions:
   contents: read
 jobs:
+  runtime-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      with:
+        persist-credentials: false
+    # Private, disposable build only: no registry login, image upload, vendor credential or publication.
+    - run: docker build --platform linux/amd64 -f images/runtime/Dockerfile -t claude-cloud-runtime:ci .
+    - run: sh hack/runtime-smoke.sh claude-cloud-runtime:ci linux/amd64
   unit:
     runs-on: ubuntu-latest
     steps:

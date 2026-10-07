@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T15:58:46+07:00"
+  at: "2026-10-07T16:37:11+07:00"
 ---
 
 # Implementation evidence
@@ -245,6 +245,19 @@ The notice scope deliberately includes whole module/toolchain trees, including u
 discovery does not analyze embedded source headers or interpret license obligations. The index explicitly
 retains `licenseReviewApproved: false` and excludes the vendor runtime. Tasks 1.2/7.3 remain pending for
 licensing, container artifacts, vendor/public naming, signing trust, support and release approval.
+
+## Container scans and updated SDK
+
+The [runtime review](runtime-vulnerability-review.md) and [sanitized image scan evidence](evidence/container-scan.json)
+record actual Grype 0.120.1 scans without suppression. The prior ARM64 manager/hook candidates have no matches.
+Both updated runtime architectures retain 27 Critical matches covering 10 advisory IDs. A checksum-pinned npm
+11.21.0 update removes four High/five Medium matches, but three fixable High bundled-dependency matches remain.
+Native ARM64 read-only/offline toolchain smoke passes; the AMD64 build and scan pass, while local QEMU execution
+fails. Matching-hardware CI is now added and pending. Task 5.1 is reopened for that changed-image verification;
+no vulnerability waiver, production signature, vendor session or release publication is claimed.
+
+`make verify` and the real 1.33.0 API suite pass after the SDK/smoke/CI change. Successful code tests do not clear
+container Critical findings; task 7.3 remains pending.
 
 ## External gates
 

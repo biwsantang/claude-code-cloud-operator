@@ -11,6 +11,7 @@ okf_version: "0.2"
 - [Integrations and research](integrations/index.md)
 - [Operations](operations/index.md)
 - [Testing](testing/index.md)
+- [Runtime vulnerability review](testing/runtime-vulnerability-review.md)
 - [Contributor workflow](workflows/index.md)
 - [Private release candidate verification](workflows/release-candidates.md)
 - [Active operator proposal](changes/build-kubernetes-operator/proposal.md)

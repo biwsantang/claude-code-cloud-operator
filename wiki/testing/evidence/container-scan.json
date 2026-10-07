@@ -1,0 +1,415 @@
+{
+  "testedAt": "2026-10-07T09:32:12.574114+00:00",
+  "sourceBaseCommit": "c60d49a093e012b7a2544d7e716431c68374d7fa",
+  "sourceFilesSHA256": {
+    "images/runtime/Dockerfile": "3eb677f1aa9fefbe1584dc71885a3f255518b83558e42cd0bd7c5da709fc1cb6",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "hack/runtime-smoke.sh": "e6d29962ac6ee80be0ce921b99a8d8c830bb753f74e64e0ddfd40096f98d5d57",
+    ".github/workflows/test.yml": "522613637ce5eef391103cf77a2f4d01747e4f66d5a0705606d367366114cfa1"
+  },
+  "grypeVersion": "0.120.1",
+  "grypeToolAssetSHA256": "cf97957fa467d25575ec2cc3228289f391ea51cf88b9cffc5f83dc03d4cbc732",
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "scope": "squashed",
+  "criticalThresholdEnabled": true,
+  "ignoreRules": [],
+  "results": [
+    {
+      "name": "manager-recreate",
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:744729f1339e2fe53e234d184be936971e51553b0a7890995b466c5ab73fe095",
+      "imageConfigID": "sha256:e1b5cfb664bf439432ccbc8f596ae76ca3052eb9acd191bc5fbcfb79fd835b15",
+      "selectedManifestDigest": "sha256:0c48b224772417908b88f458f01512878a348a3084bcf9d228ddc1ba510656d5",
+      "scanTimestamp": "2026-10-07T16:06:41.504014+07:00",
+      "distro": {
+        "name": "debian",
+        "version": "13.7",
+        "idLike": []
+      },
+      "rawReportSHA256": "d4585d5c42370b2dc620e0c726731008d94a833922216399003fcc3564d81a38",
+      "matchesBySeverity": {},
+      "ignoredMatchCount": 0,
+      "criticalGatePassed": true
+    },
+    {
+      "name": "hook-intake-arm64",
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:a66e4fc8bec59077b5f5f697c7946125fbc212a2b9a2d1c994f9dfdf8e19aa47",
+      "imageConfigID": "sha256:9e14d8f60dbbd1411055c20b5b18c44ca41bf880f0b59188ca486cf240773385",
+      "selectedManifestDigest": "sha256:d7f059b4e3488733e6bf2027ddd7521e4cc30d06adc0b7a4c12c7bd7cca39fe4",
+      "scanTimestamp": "2026-10-07T16:06:42.411222+07:00",
+      "distro": {
+        "name": "debian",
+        "version": "13.7",
+        "idLike": []
+      },
+      "rawReportSHA256": "1bfee6bd53e3f04def7f802799e3a3e0a803f59a40f0bce239f0562521f58fe4",
+      "matchesBySeverity": {},
+      "ignoredMatchCount": 0,
+      "criticalGatePassed": true
+    },
+    {
+      "name": "runtime-arm64",
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:6a31a2e4a5c5886ee6a6116399913dab5abf2a90c76ed083e3a1996b21722091",
+      "imageConfigID": "sha256:d011624bdb34adf069bd2ad4071176028c403e5fc5e1be3cbf7be60dc140392d",
+      "selectedManifestDigest": "sha256:cb4b134106a3316c18a998c6e0cd48f308bcc2c0e398ce452ab8b3d74c92bcf7",
+      "scanTimestamp": "2026-10-07T16:06:49.104244+07:00",
+      "distro": {
+        "name": "debian",
+        "version": "12.15",
+        "idLike": []
+      },
+      "rawReportSHA256": "dafc99f458abbf08da745b84d364b71d55793ca9ab83cee5c48a6e3a780a1400",
+      "matchesBySeverity": {
+        "Negligible": 142,
+        "High": 133,
+        "Critical": 27,
+        "Medium": 191,
+        "Low": 37,
+        "Unknown": 17
+      },
+      "ignoredMatchCount": 0,
+      "criticalGatePassed": false
+    },
+    {
+      "name": "runtime-npm-fixed",
+      "platform": "linux/arm64",
+      "localImageIndexID": "sha256:4ed9434dfaa2c3c0c9de751dcaf82f20e6b26f27b0accfb7399fa18df64538d4",
+      "imageConfigID": "sha256:39638b63bf2c98cff0b1fea88457db702bd340a4cd44480e452311b4d2a2c29f",
+      "selectedManifestDigest": "sha256:afc6f97693cbfca4e622d0cbd9062b914d840220e5835c764ec9e042c942dc93",
+      "scanTimestamp": "2026-10-07T16:19:35.522975+07:00",
+      "distro": {
+        "name": "debian",
+        "version": "12.15",
+        "idLike": []
+      },
+      "rawReportSHA256": "8979a8d9d44fc4edd7272efd9b16e6bc79e7526e651cc49f6d8d13839d60dfd6",
+      "matchesBySeverity": {
+        "Negligible": 142,
+        "High": 129,
+        "Critical": 27,
+        "Medium": 186,
+        "Low": 37,
+        "Unknown": 17
+      },
+      "ignoredMatchCount": 0,
+      "criticalGatePassed": false
+    },
+    {
+      "name": "runtime-npm-fixed-amd64",
+      "platform": "linux/amd64",
+      "localImageIndexID": "sha256:08fafa1d3135ff63c9efa495b599ea596f46232547674fb8e7bde6f78938851b",
+      "imageConfigID": "sha256:850cec23746c6abbcd2768486671c0fd0b88297ff7462edea6ba0bd460cbf53b",
+      "selectedManifestDigest": "sha256:e33d89b35e90706d9a14e37b143c0bccd3e5087a829a8ff811878cb765251822",
+      "scanTimestamp": "2026-10-07T16:23:15.679809+07:00",
+      "distro": {
+        "name": "debian",
+        "version": "12.15",
+        "idLike": []
+      },
+      "rawReportSHA256": "de9599476aa1b8ae903d9a060a13ab835cf856e77fdedcbe69026fcd38a6ab3e",
+      "matchesBySeverity": {
+        "Negligible": 142,
+        "High": 129,
+        "Critical": 27,
+        "Medium": 186,
+        "Low": 37,
+        "Unknown": 17
+      },
+      "ignoredMatchCount": 0,
+      "criticalGatePassed": false
+    }
+  ],
+  "uniqueCriticalAdvisories": [
+    {
+      "id": "CVE-2026-19931",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-19931",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-5450",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-5450",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "libc-bin",
+          "version": "2.36-9+deb12u14"
+        },
+        {
+          "name": "libc6",
+          "version": "2.36-9+deb12u14"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-11856",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-11856",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-8924",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-8924",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-10536",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-10536",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-18924",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-18924",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-8927",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-8927",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "curl",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl3-gnutls",
+          "version": "7.88.1-10+deb12u15"
+        },
+        {
+          "name": "libcurl4",
+          "version": "7.88.1-10+deb12u15"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-19445",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-19445",
+      "fixState": "not-fixed",
+      "packages": [
+        {
+          "name": "libpython3.11-minimal",
+          "version": "3.11.2-6+deb12u8"
+        },
+        {
+          "name": "libpython3.11-stdlib",
+          "version": "3.11.2-6+deb12u8"
+        },
+        {
+          "name": "python3.11",
+          "version": "3.11.2-6+deb12u8"
+        },
+        {
+          "name": "python3.11-minimal",
+          "version": "3.11.2-6+deb12u8"
+        },
+        {
+          "name": "python3.11-venv",
+          "version": "3.11.2-6+deb12u8"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2026-60002",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2026-60002",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "openssh-client",
+          "version": "1:9.2p1-2+deb12u10"
+        }
+      ]
+    },
+    {
+      "id": "CVE-2025-7458",
+      "source": "https://security-tracker.debian.org/tracker/CVE-2025-7458",
+      "fixState": "wont-fix",
+      "packages": [
+        {
+          "name": "libsqlite3-0",
+          "version": "3.40.1-2+deb12u2"
+        }
+      ]
+    }
+  ],
+  "initialFixableHigh": [
+    {
+      "id": "GHSA-mwp4-54f8-5fhr",
+      "name": "ip-address",
+      "version": "10.2.0",
+      "fixedVersions": [
+        "10.3.1"
+      ],
+      "source": "https://github.com/advisories/GHSA-mwp4-54f8-5fhr"
+    },
+    {
+      "id": "GHSA-rgw5-rvv9-x895",
+      "name": "brace-expansion",
+      "version": "5.0.7",
+      "fixedVersions": [
+        "5.0.9"
+      ],
+      "source": "https://github.com/advisories/GHSA-rgw5-rvv9-x895"
+    },
+    {
+      "id": "GHSA-mh99-v99m-4gvg",
+      "name": "brace-expansion",
+      "version": "5.0.7",
+      "fixedVersions": [
+        "5.0.8"
+      ],
+      "source": "https://github.com/advisories/GHSA-mh99-v99m-4gvg"
+    },
+    {
+      "id": "GHSA-r292-9mhp-454m",
+      "name": "tar",
+      "version": "7.5.19",
+      "fixedVersions": [
+        "7.5.21"
+      ],
+      "source": "https://github.com/advisories/GHSA-r292-9mhp-454m"
+    },
+    {
+      "id": "GHSA-rfgv-xxqx-mfg5",
+      "name": "undici",
+      "version": "6.27.0",
+      "fixedVersions": [
+        "6.28.1"
+      ],
+      "source": "https://github.com/advisories/GHSA-rfgv-xxqx-mfg5"
+    },
+    {
+      "id": "GHSA-6j4f-fj2g-mc7p",
+      "name": "brace-expansion",
+      "version": "5.0.7",
+      "fixedVersions": [
+        "5.0.10"
+      ],
+      "source": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+    },
+    {
+      "id": "GHSA-qhr7-859c-m2p7",
+      "name": "brace-expansion",
+      "version": "5.0.7",
+      "fixedVersions": [
+        "5.0.11"
+      ],
+      "source": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+    }
+  ],
+  "remainingFixableHigh": [
+    {
+      "id": "GHSA-rfgv-xxqx-mfg5",
+      "name": "undici",
+      "version": "6.28.0",
+      "fixedVersions": [
+        "6.28.1"
+      ],
+      "source": "https://github.com/advisories/GHSA-rfgv-xxqx-mfg5"
+    },
+    {
+      "id": "GHSA-6j4f-fj2g-mc7p",
+      "name": "brace-expansion",
+      "version": "5.0.9",
+      "fixedVersions": [
+        "5.0.10"
+      ],
+      "source": "https://github.com/advisories/GHSA-6j4f-fj2g-mc7p"
+    },
+    {
+      "id": "GHSA-qhr7-859c-m2p7",
+      "name": "brace-expansion",
+      "version": "5.0.9",
+      "fixedVersions": [
+        "5.0.11"
+      ],
+      "source": "https://github.com/advisories/GHSA-qhr7-859c-m2p7"
+    }
+  ],
+  "npmVersion": "11.21.0",
+  "npmArchiveSHA512": "668bfc2a16a63677a22dd10bb63e5800bb4d9895b82f87c22d3ce37e9cd71b6c3a3121dc7f453181d94ae6e9680ae92c593fbb986514ef08bbf5c3ba46a8af3e",
+  "arm64NativeOfflineToolchainSmokePassed": true,
+  "amd64NativeExecutionVerified": false,
+  "amd64EmulatedNpmExitCode": 139,
+  "amd64NativeCLIQemuCrashAndHang": true,
+  "amd64ProbeContainerStopped": true,
+  "matchingHardwareCISmokePending": true,
+  "vendorAcceptancePassed": false,
+  "releaseApproved": false,
+  "published": false
+}
