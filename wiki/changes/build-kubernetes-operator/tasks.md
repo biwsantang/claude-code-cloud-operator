@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:34:23+07:00"
+  at: "2026-10-07T13:43:50+07:00"
 ---
 
 # Implementation tasks
@@ -49,7 +49,7 @@ Tasks are checked only when their complete verification passes. External release
 ## 6. Operations and delivery
 
 - [x] 6.1 Add status/events/metrics without sensitive values or high-cardinality user labels; verification: redaction tests and terminal infrastructure counts survive Pod removal.
-- [ ] 6.2 Package chart and raw manifests from one generated source; verification: install/upgrade/uninstall on supported Kubernetes versions, RBAC audit and suspended examples.
+- [x] 6.2 Package chart and raw manifests from one generated source; verification: install/upgrade/uninstall on supported Kubernetes versions, RBAC audit and suspended examples.
 - [ ] 6.3 Run real vendor E2E in a dedicated synthetic environment; verification: registration, two turns, clone/push, concurrent users, interruption and fresh-order recovery with protected test-only capture.
 - [ ] 6.4 Perform fault/scale tests and tune the lease from measured p99 startup; verification: scheduling exhaustion, unavailable API, node loss and no repeated submission.
 
@@ -62,4 +62,4 @@ Tasks are checked only when their complete verification passes. External release
 Verified candidate slices are recorded in [implementation evidence](../../testing/implementation-evidence.md). Remaining task checkboxes deliberately retain their full verification criteria. Do not start live dispatch while intake,
 launch fencing and security gates remain incomplete. A working demo is not the production acceptance gate.
 
-Task 3.1 now includes end-to-end native Date translation, immutable receipt offsets and missing-Date partial retries. The 1.33.0, 1.36.0 and 1.37.0 API versions verify positive/negative skew, completion, launch, running preservation, cleanup and replay; pure expiry tests cover the one-hour bounds and classifications. Task 6.2 has current clock-fix build Helm/raw install/update/removal evidence on 1.33.1 and 1.37.0; installed 1.36 verification is in progress to include a dependency-compatible upper target. See the evidence ledger for the exact matrix.
+Task 3.1 now includes end-to-end native Date translation, immutable receipt offsets and missing-Date partial retries. The 1.33.0, 1.36.0 and 1.37.0 API versions verify positive/negative skew, completion, launch, running preservation, cleanup and replay; pure expiry tests cover the one-hour bounds and classifications. Task 6.2 has current clock-fix build Helm/raw install/update/removal evidence on 1.33.1, 1.36.4 and 1.37.0, including loaded image digest verification, positive/negative RBAC, suspended drain and retained CRDs/namespace. These are tested candidates; release support and vendor acceptance remain separate gates. See the evidence ledger for the exact matrix.

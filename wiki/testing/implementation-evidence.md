@@ -6,7 +6,7 @@ tags: [claude-code, kubernetes, operator]
 status: draft
 generated:
   by: code-wiki/0.1.0
-  at: "2026-10-07T13:34:23+07:00"
+  at: "2026-10-07T13:43:50+07:00"
 ---
 
 # Implementation evidence
@@ -15,7 +15,7 @@ This ledger describes the implementation candidate, not production acceptance. R
 worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
 The [GitHub verification run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37575653587)
 passes all jobs: unit/race/vet/dependency checks, generated-source parity, Linux AMD64/ARM64 cross-builds and both API-server matrix versions.
-The clock correction at `938d9eb` passes local `make verify` and the expanded API-server suite on 1.33.0, 1.36.0 and 1.37.0. [Its CI run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37580606346) passes all jobs, including both original API versions and cross-builds. The next CI matrix also includes 1.36.0.
+The clock correction at `938d9eb` passes local `make verify` and the expanded API-server suite on 1.33.0, 1.36.0 and 1.37.0. [Its CI run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37580606346) passes all jobs, including both original API versions and cross-builds. [The expanded CI run at `66e7557`](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37582246718) passes unit/generation/cross-build checks and all three API versions.
 The tested ARM64 manager architecture-manifest digest at recovery commit `79b8921` is
 `sha256:71cdd7313c567406bd999f5eb9e1e409add3353f3c1480041e7534634bf454bb`.
 This is a local private build, not a published release. The earlier CI link applies to its named commit;
@@ -32,7 +32,7 @@ follow the PR checks for the latest revision.
 | Fleet convergence | Repeated unchanged reconciles preserve Deployment resourceVersion. | Kind 1.37 installed admission is ready; hook/session/manager namespace permission checks deny unauthorized access. |
 | Hook runtime | AMD64 and ARM64 images install the hook under a read-only root with UID 1000 within the configured 32Mi hook volume. Reproduce with `sh hack/hook-smoke.sh IMAGE PLATFORM`. | AMD64 ran through QEMU on an ARM64 host; it is not a native AMD64-host test. |
 | Vendor runtime | AMD64 and ARM64 private images verify signing-key fingerprint, manifest signature and binary checksum. Read-only UID 1000 smoke prints Claude 2.1.285, Node 24.21.0, Python 3.11.2 and git 2.39.5; required flags exist. | Reproduce with `sh hack/runtime-smoke.sh IMAGE PLATFORM`. AMD64 ran through QEMU. Real registration, session turns and git push remain unverified. |
-| Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm install/upgrade and suspended-Fleet drain/uninstall pass on kind 1.33.1 and 1.37.0. Raw install/admission/drain/removal pass separately on 1.33.1 and 1.37.0. CRDs and administrator namespace remain. Both sources pass on current clock-fix build at the minimum and upper versions. The installed 1.36 dependency-compatible check and active vendor drain remain pending. |
+| Packaging | Helm lint and render pass; raw and Helm resources generated from Kustomize. | Helm and raw install/update/admission/suspended-Fleet drain/removal pass on kind 1.33.1, 1.36.4 and 1.37.0 with the clock-fix build. The loaded OCI index matches the requested digest. CRDs and administrator namespace remain; active vendor drain is pending. |
 | Enforced network | Isolated kind 1.37.0 with Cilium 1.20.2 and cert-manager 1.21.2 passed testing; the cluster was removed. | Two fresh selected Pods deny direct public/private/API/metadata/Pod Identity probes with explicit Cilium policy-denied flows. Approved HTTPS through the proxy passes CA validation, private/IP CONNECT is rejected. This is not downstream approval. |
 
 The reproducible fixture is [`hack/network-smoke.py`](../../hack/network-smoke.py); the sanitized result is
@@ -75,7 +75,7 @@ Cilium 1.20.2 and cert-manager 1.21.2 were Ready before installation. Both Helm 
 this cluster with Restricted namespace policy and an explicitly pinned manager. The raw path followed a
 complete Helm uninstall; there were no overlapping installations. Its suspended example passed server dry-run,
 converged and drained. Namespaced and cluster installation resources were then removed while retaining CRDs
-and the administrator namespace. The isolated cluster was removed; an unrelated pre-existing cluster was left intact.
+and the administrator namespace. Each completed disposable cluster was removed after evidence capture; an unrelated pre-existing cluster was left intact.
 
 [Cilium's compatibility guarantee](https://docs.cilium.io/en/stable/network/kubernetes/compatibility/) and
 [cert-manager's tested version range](https://cert-manager.io/docs/releases/) currently cover Kubernetes 1.33–1.36
@@ -85,10 +85,15 @@ upstream compatibility guarantee. Do not advertise a universal supported product
 The reproducible packaging fixture is [`hack/install-smoke.py`](../../hack/install-smoke.py), restricted to an
 explicit disposable operator kind context and fresh installation namespace. It verifies loaded image targets
 against the requested digest, then runs Helm and raw install/update/admission/RBAC/suspended-drain/removal.
-[Minimum-version evidence](evidence/packaging-v133.json) and [upper-version evidence](evidence/packaging-v137.json) records the tested OCI index digest. The initial local
+[Minimum-version evidence](evidence/packaging-v133.json), [dependency-compatible 1.36 evidence](evidence/packaging-v136.json) and [forward-version evidence](evidence/packaging-v137.json) records the tested OCI index digest. The initial local
 child-digest alias pointed at the image index; it contained the correct architecture image, but we corrected
 the pin and reran both paths. The fixture rejects that alias mismatch before installation. This is local
 private-image evidence, not a signed release or active vendor drain.
+
+The dependency-compatible cluster used [kind 0.33.0's published node pin](https://github.com/kubernetes-sigs/kind/releases/tag/v0.33.0):
+`kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed`.
+It passed the same default-namespace packaging fixture and loaded image check on both paths. This ledger
+reports exact tested versions; it does not establish every intermediate minor/patch or production vendor compatibility.
 
 ## Requirement audit
 
