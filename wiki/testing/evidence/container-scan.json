@@ -5,7 +5,7 @@
     "images/runtime/Dockerfile": "3eb677f1aa9fefbe1584dc71885a3f255518b83558e42cd0bd7c5da709fc1cb6",
     "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
     "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
-    "hack/runtime-smoke.sh": "e6d29962ac6ee80be0ce921b99a8d8c830bb753f74e64e0ddfd40096f98d5d57",
+    "hack/runtime-smoke.sh": "58f8e0ca7a8652cc70c8083f4c57e5d9b1320b231268fe427e6134ca3580da03",
     ".github/workflows/test.yml": "522613637ce5eef391103cf77a2f4d01747e4f66d5a0705606d367366114cfa1"
   },
   "grypeVersion": "0.120.1",
@@ -411,5 +411,13 @@
   "matchingHardwareCISmokePending": true,
   "vendorAcceptancePassed": false,
   "releaseApproved": false,
-  "published": false
+  "published": false,
+  "initialAMD64HardwareSmoke": {
+    "sourceCommit": "1c5a01ebf11ad2b9b8cc307bfb22324bfd001d3c",
+    "runURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37601911772",
+    "jobID": 112728057338,
+    "passed": true,
+    "scope": "CLI version and offline npm fixture; restored CLI flag assertions await next CI run"
+  },
+  "arm64CLIFlagsAndOfflineToolchainSmokePassed": true
 }
