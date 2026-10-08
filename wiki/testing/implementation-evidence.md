@@ -11,8 +11,8 @@ generated:
 
 # Implementation evidence
 
-This ledger describes the implementation candidate, not production acceptance. Run commands from the feature
-worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
+This ledger describes the implementation candidate, not production acceptance. Sections retain evidence for
+their named historical revisions; the native vendor trial below records the latest tested behavior. Run commands from the feature worktree. Implementation commit: `a26bed1d33aca0a645a3d8979dc057b316a4aaa0`.
 The [GitHub verification run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37575653587)
 passes all jobs: unit/race/vet/dependency checks, generated-source parity, Linux AMD64/ARM64 cross-builds and both API-server matrix versions.
 The clock correction at `938d9eb` passes local `make verify` and the expanded API-server suite on 1.33.0, 1.36.0 and 1.37.0. [Its CI run](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37580606346) passes all jobs, including both original API versions and cross-builds. [The expanded CI run at `66e7557`](https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37582246718) passes unit/generation/cross-build checks and all three API versions.
@@ -402,3 +402,48 @@ for the scope/conditions. The final ARM64 scan passes the Critical gate with 1 H
 The unused inherited Pebble supervisor was removed, eliminating its four High Go-stdlib matches.
 `make verify`, the real Kubernetes 1.33 API suite, four override archive tests, actionlint, shell syntax
 and wiki metadata/local links pass. Native AMD64 remains pending CI for this revision.
+
+
+## Dedicated native vendor trial and intake fixes
+
+The [sanitized native trial evidence](evidence/native-vendor-trial.json) binds the runtime, rebuilt
+manager/hook image digests and changed source hashes. On native ARM64, the maintained Ubuntu 26.04
+runtime registered with the real Claude service. OAuth dispatch into a user-authorized private repository
+cloned successfully, ran actual Bash checks for Node/npm, Python SSL/SQLite/venv, Git and SSH, and returned
+the exact test reply. A second turn and replacement-container recovery passed with a fresh workspace.
+
+A disposable kind 1.37.0 cluster with Cilium 1.20.2 and cert-manager 1.21.2 then exercised installed
+admission, native polling, work-order intake and real session Pods. Both fresh network probes denied public,
+private, Kubernetes API, metadata and Pod Identity traffic, with explicit Cilium policy drops. API denial
+was checked after Service DNAT. Approved API HTTPS retained CA validation and private/IP CONNECT was rejected.
+The administrator wrote a Fleet/policy-bound activation report only after those checks passed.
+
+The trial exposed three defects that are fixed in this revision:
+
+- Controller status writes could conflict with receipt completion. The hook now re-reads and retries only
+  bounded receipt conflicts, checking the original UID, owner and immutable intent each time. It never retries
+  a Pod submission. A real API-server status-write race failed before the fix and passes after it; continuous
+  conflicts exhaust the bounded retry without completion or launch.
+- The native config snapshot omitted ConfigMap projection symlinks. An optional restricted init container now
+  materializes regular files before Claude starts. Real Pods exited this init step successfully, seeded their
+  session config and captured exact recovery, follow-up and runtime-tool replies through a test-only Stop hook.
+- The 60-second Pod grace period was shorter than Claude's advertised shutdown budget. New session Pods use
+  120 seconds. The recovered runner terminated with exit 0 in 13.94 seconds during the controlled stop test.
+
+Deleting the original runner left its completed receipt Lost with the original launch fence and Pod UID
+preserved, without a replacement for that work order. The native service supplied a fresh order; the new Pod
+resumed the session, handled a follow-up and ran the SDK checks. Multiple fresh vendor-issued orders were
+observed, so this result does not claim exactly-once execution across orders. The fixed polling logs contained
+three Accepted occurrences and zero ReceiptCompletionFailed occurrences in the captured observation window.
+An additional fresh session was stopped while its clone was still progressing and is excluded from pass counts.
+
+`make verify`, the complete `make test-api ENVTEST_VERSION=1.33.0` race suite and native ARM64 restricted hook
+smoke pass. Rebuilt manager and hook Grype scans report zero matches and zero ignored matches. Local OCI content
+bytes match the digest references loaded into kind. The runtime is unchanged from the previously verified image;
+its one unpatched High npm cache advisory remains visible in the [runtime assessment](runtime-vulnerability-review.md).
+
+These are dedicated local test results. Live Git push, concurrent-user isolation, real server-side credential
+revocation, target startup p99/lease tuning, support/licensing review, tagged publication and downstream migration
+remain pending. The capture hook and credentials were supplied only to the dedicated environment, not baked into
+images. No repository edits, commits or pushes were requested from Claude. See the evidence cleanup record for
+the disposable cluster and credential removal. Tasks 2.3/6.3/6.4/7.1 remain unchecked for their full criteria.

@@ -68,7 +68,9 @@ restricted Pods and replay retention remain in place. Reports no longer require 
 explicit expiry and revocation still block new intake. Historical verification for earlier revisions is in
 the [evidence ledger](../../testing/implementation-evidence.md), including the now-retired bundle/signing path.
 
-Tasks 2.3/6.3/6.4/7.1/7.2 remain pending for native connection/revocation, real sessions and OAuth, measured
-startup, requirements acceptance and downstream migration. Task 1.2 retains support/licensing review.
+The dedicated native trial now verifies registration, OAuth dispatch, clone, actual SDK tools, follow-up and
+fresh-order recovery; see its source-bound evidence in the ledger. Tasks 2.3/6.3/6.4/7.1/7.2 remain pending for
+real server-side revocation, live Git push/concurrent users, target startup p99, full requirements acceptance
+and downstream migration. Task 1.2 retains support/licensing review.
 Task 7.3 remains pending until the new pipeline and actual artifacts are exercised and reviewed. An operator
 release candidate can be built independently; production Fleet acceptance still requires an accepted runtime.

@@ -864,6 +864,39 @@ func TestAPIRecovery(t *testing.T) {
 		}
 		intake(t, f, hc, token, in.Order)
 	})
+	t.Run("completion-retries-controller-status-conflict", func(t *testing.T) {
+		f, hc, token := fixture(t, "status-race")
+		in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "status-race"}
+		traced := &receiptStatusRaceClient{Client: hc, manager: manager, conflicts: 1}
+		result := hook.Run(ctx, traced, in, token, time.Now())
+		if result.Code != hook.Submitted || traced.updates < 2 {
+			t.Fatalf("controller status conflict prevented completion: %s, updates=%d", result.Reason, traced.updates)
+		}
+		w := &api.ClaudeWorkOrder{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: result.Name}, w))
+		if !w.Spec.Complete || w.Status.Reason != "SyntheticStatusUpdate1" || w.Status.LaunchAttempted {
+			t.Fatal("completion lost the controller observation or attempted a launch")
+		}
+		s := &corev1.Secret{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: w.Spec.CredentialSecretRef.Name}, s))
+		if !controller.CredentialMatches(w, s) {
+			t.Fatal("completion changed the credential identity")
+		}
+	})
+	t.Run("completion-conflict-retry-is-bounded", func(t *testing.T) {
+		f, hc, token := fixture(t, "status-pressure")
+		in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "status-pressure"}
+		traced := &receiptStatusRaceClient{Client: hc, manager: manager, conflicts: 100}
+		result := hook.Run(ctx, traced, in, token, time.Now())
+		if result.Code != hook.Retryable || result.Reason != "ReceiptCompletionFailed" || traced.updates < 2 || traced.updates > 5 {
+			t.Fatalf("completion retry was not bounded: %s, updates=%d", result.Reason, traced.updates)
+		}
+		w := &api.ClaudeWorkOrder{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(in.Pool, in.Order)}, w))
+		if w.Spec.Complete || w.Status.LaunchAttempted {
+			t.Fatal("failed completion submitted work")
+		}
+	})
 	t.Run("concurrent-completion-before-credential-admission", func(t *testing.T) {
 		f, hc, token := fixture(t, "credential-race")
 		in := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "credential-race"}
@@ -1156,6 +1189,32 @@ type mutatedReceiptClient struct {
 }
 
 type incompleteClient struct{ client.Client }
+
+type receiptStatusRaceClient struct {
+	client.Client
+	manager   client.Client
+	conflicts int
+	updates   int
+}
+
+func (c *receiptStatusRaceClient) Update(ctx context.Context, o client.Object, opts ...client.UpdateOption) error {
+	if w, ok := o.(*api.ClaudeWorkOrder); ok && w.Spec.Complete {
+		c.updates++
+		if c.conflicts > 0 {
+			c.conflicts--
+			fresh := &api.ClaudeWorkOrder{}
+			if err := c.manager.Get(ctx, client.ObjectKeyFromObject(w), fresh); err != nil {
+				return err
+			}
+			fresh.Status.Phase = "Pending"
+			fresh.Status.Reason = fmt.Sprintf("SyntheticStatusUpdate%d", c.updates)
+			if err := c.manager.Status().Update(ctx, fresh); err != nil {
+				return err
+			}
+		}
+	}
+	return c.Client.Update(ctx, o, opts...)
+}
 
 type credentialRaceClient struct {
 	client.Client

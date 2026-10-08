@@ -70,3 +70,5 @@ The final evidence must show one successful audited Pod-create request per order
 Review [container vulnerability findings and execution limits](runtime-vulnerability-review.md) before accepting the optional runtime. Operator release checks are described in the [release guide](../workflows/release-candidates.md).
 
 Review the [curl advisory assessment](curl-advisory-assessment.md) for the eight retained advisory IDs and missing regressions.
+
+The [dedicated native trial](implementation-evidence.md#dedicated-native-vendor-trial-and-intake-fixes) records actual registration, OAuth/session turns, tools and recovery with explicit remaining gates.

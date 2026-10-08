@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
@@ -174,8 +175,30 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 	}
 	w.Spec.Complete = true
 	// Admission reads the Secret uncached and checks owner, immutability and digest before completion.
-	if err := c.Update(ctx, w); err != nil {
+	// Controller status writes can race intake. Retry only receipt conflicts, never a Pod submission.
+	redelivered := false
+	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		latest := &api.ClaudeWorkOrder{}
+		if err := c.Get(ctx, key, latest); err != nil {
+			return err
+		}
+		if latest.UID != w.UID || !latest.DeletionTimestamp.IsZero() || !contract.Owns(f, latest, "ClaudeRunnerFleet") || !contract.SameReceipt(w.Spec, latest.Spec) {
+			return apierrors.NewForbidden(api.GroupVersion.WithResource("claudeworkorders").GroupResource(), w.Name, errors.New("receipt identity changed"))
+		}
+		if latest.Spec.Complete {
+			redelivered = true
+			return nil
+		}
+		if latest.Status.Terminal {
+			return apierrors.NewForbidden(api.GroupVersion.WithResource("claudeworkorders").GroupResource(), w.Name, errors.New("receipt is terminal"))
+		}
+		latest.Spec.Complete = true
+		return c.Update(ctx, latest)
+	}); err != nil {
 		return recoverCompletedReceipt(ctx, c, f, w, err, "ReceiptCompletionFailed")
+	}
+	if redelivered {
+		return Result{Code: Submitted, Reason: "Redelivered", Name: name}
 	}
 	return Result{Code: Submitted, Reason: "Accepted", Name: name}
 }

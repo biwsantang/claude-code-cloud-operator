@@ -44,6 +44,13 @@ Avoid mutable configuration names. Publish immutable ConfigMaps under new names;
 until their orders finish. Old policy revisions remain while the Fleet exists to preserve active boundaries.
 Source TLS certificate handling is generic and separate from inference credentials.
 
+An optional `execution.hostConfigRef` supplies flat files such as `settings.json` and `.claude.json`.
+The session Pod copies the ConfigMap's projected files into a bounded 32Mi ephemeral volume before
+starting Claude; native snapshots otherwise omit the projection's symlinks. This optional init step uses
+the same pinned runner image and restricted identity, requires `/bin/sh` and `cp`, mounts no credential,
+and gives the runner a read-only `/etc/claude`. Treat configured hooks as trusted executable code.
+Test-only reply capture belongs in a dedicated environment's ConfigMap, never in the runtime image.
+
 After `helm --wait`, verify the Certificate is Ready and the webhook Service has ready EndpointSlices, then
 run `kubectl apply --dry-run=server -k config/samples` using the intended kubeconfig/context. A newly created
 Service can briefly reject connections while routing converges, even after manager readiness. Retry this
@@ -91,6 +98,11 @@ CRDs and leaves the namespace to its administrator; never make namespace deletio
 Rollback: suspend, stop old/new polling overlap, drain existing orders, then revert the implementation under
 review. A lost or uncertain order requires a fresh order from the external control plane, not a replacement Pod.
 The operator reports infrastructure state; it cannot report a user's session outcome from Kubernetes status.
+
+Session Pods have a 120-second termination grace period. Claude 2.1.285 reports an 80-second shutdown
+budget and up to 20 seconds for an in-flight release before deregistration. Keep downstream supervisor
+timeouts large enough for that native budget; verify it again when updating Claude. See the
+[native runner reference](https://code.claude.com/docs/en/self-hosted-environments-reference).
 
 Metrics are disabled by default. If `--metrics-bind-address` is enabled, isolate the endpoint to trusted
 monitoring clients. Its fixed phase labels expose retained infrastructure counts, including terminal observations
