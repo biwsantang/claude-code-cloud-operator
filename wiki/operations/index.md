@@ -13,9 +13,10 @@ generated:
 
 The candidate provides generated CRDs, namespaced RBAC, manager manifests, suspended examples and a chart.
 See the [installation/drain guide](install-and-drain.md) and [exact tested matrix](../testing/implementation-evidence.md).
-Release and vendor acceptance remain pending; cluster-scoped CRD installation requires a cluster administrator.
-Start with one manager installation watching one explicit namespace. Multiple namespaces need separate,
-reviewed RBAC and independent fleet environments; multi-cluster coordination is outside the MVP.
+See the [public Helm/Argo guide](public-installation.md) for released artifact consumption.
+The dedicated native trial passed; each target installation still needs acceptance. Cluster-scoped CRD
+installation requires a cluster administrator. Use one installation per cluster watching one namespace.
+Multiple installation namespaces are not supported by the current global webhook/RBAC names.
 
 A trusted operator supplies the external environment ID, credential Secret, digest-pinned images,
 placement, resource budgets and network validation. The fleet starts suspended. Kubernetes CR writers

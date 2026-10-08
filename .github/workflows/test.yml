@@ -21,6 +21,9 @@ jobs:
       with:
         go-version-file: go.mod
     - run: go mod verify && go test -race ./... && go vet ./...
+    - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4
+      with:
+        version: v4.2.3
     - run: make test-tools
     - run: go install sigs.k8s.io/kustomize/kustomize/v5@v5.8.1
     - run: make generate package && git diff --exit-code

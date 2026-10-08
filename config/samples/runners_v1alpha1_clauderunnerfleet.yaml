@@ -1,6 +1,8 @@
 apiVersion: runners.biwsantang.github.io/v1alpha1
 kind: ClaudeRunnerFleet
 metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
   labels:
     app.kubernetes.io/name: claude-code-cloud-operator
     app.kubernetes.io/managed-by: kustomize

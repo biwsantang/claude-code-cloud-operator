@@ -2,7 +2,8 @@
 
 A namespace-scoped Kubernetes operator for Claude Code self-hosted environments.
 
-**Status: implementation candidate. Local recovery tests pass; production acceptance and vendor E2E remain pending.**
+**Status: release candidate preparation. Recovery tests and a dedicated native Claude trial pass;
+production acceptance remains specific to each installation.**
 
 The Fleet controller manages Anthropic's native orchestrator, hook identity and network policy. The native
 spawn hook persists an immutable work-order receipt and credential; the WorkOrder controller creates one
@@ -39,8 +40,10 @@ same Kustomize source. Do not hand-edit generated files.
 Build the manager and hook with `docker build --target manager` / `--target hook`.
 These images contain original dependency/toolchain notices. Version tags on reviewed `main` history run
 [operator release CI](.github/workflows/release.yml): source/API/image checks, AMD64/ARM64 images in GHCR
-with SBOM and BuildKit provenance, and a chart plus digest-pinned raw manifests in a GitHub release.
-No release has been published or this publishing path exercised yet. See the [release guide](wiki/workflows/release-candidates.md).
+with SBOM and BuildKit provenance, scans of the published digests, and an OCI chart plus digest-pinned
+raw installation/removal manifests in a GitHub release. Public anonymous pulls gate release creation.
+Published versions and immutable references are listed in [Releases](https://github.com/biwsantang/claude-code-cloud-operator/releases).
+See the [release guide](wiki/workflows/release-candidates.md) for the publishing contract.
 
 The Claude runtime is a separate image supplied by the administrator. The
 [private runtime candidate](images/runtime/README.md) uses a maintained Ubuntu devcontainer base with Node/Python
@@ -48,7 +51,15 @@ and distro-packaged curl/OpenSSH. It is tested by a separate
 path-filtered workflow. Its unresolved vulnerabilities block acceptance of that runtime; they do not
 become findings in the manager/hook images. Neither workflow publishes Anthropic binaries.
 
-## Installation candidate
+## Install with Helm or Argo CD
+
+The public chart is published at `oci://ghcr.io/biwsantang/charts/claude-code-cloud-operator`.
+Choose a published version from [Releases](https://github.com/biwsantang/claude-code-cloud-operator/releases).
+The chart supplies the released manager digest; public manager/hook images need no registry login.
+Follow the [public installation guide](wiki/operations/public-installation.md) for prerequisites,
+Helm commands, [Argo CD examples](examples/argocd/application.yaml), Fleet setup and upgrades.
+
+For a local source build before a release exists:
 
 Use a dedicated trust namespace and an existing cert-manager installation. Build and verify an image,
 then supply its digest. There is one operator installation per cluster in this initial version.
@@ -60,6 +71,7 @@ helm install cloud-operator charts/claude-code-cloud-operator --namespace cloud-
 ```
 
 Helm leaves namespace ownership to the administrator. Raw/Kustomize installation bootstraps its namespace.
+CRDs and the raw namespace carry explicit Argo prune/deletion protection.
 Replace the placeholder image in `config/install` before using raw manifests. Keep Fleets suspended until
 the installation, proxy/network and dedicated vendor acceptance checks pass. The chart does not create
 external Claude environments, organization settings or cloud credentials.

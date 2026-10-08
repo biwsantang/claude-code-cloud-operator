@@ -30,6 +30,7 @@ Review [implementation evidence](testing/implementation-evidence.md) and the
 
 - [Operator practices and community lessons](integrations/operator-practices.md)
 - [Operator releases](workflows/release-candidates.md)
+- [Public Helm and Argo CD installation](operations/public-installation.md)
 
 - [Runtime vulnerability findings and execution limits](testing/runtime-vulnerability-review.md)
 
