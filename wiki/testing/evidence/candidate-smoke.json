@@ -1,0 +1,86 @@
+{
+  "testedAt": "2026-10-07T08:28:37.783591+00:00",
+  "sourceCommit": "aa0318de15628e9e8c6fe729fd9c5cdf1caa66cd",
+  "sourceTreeSHA256": "22cfc9bb23ebf213cd51d3282064b7f5feaa0bfd6d56916644de2235948c30bf",
+  "sourceDirty": false,
+  "candidateManifestSHA256": "6ef75534ccd4c0e8e4de2a66bc8dc71886328cdddc7e05df334c1faa76c90847",
+  "goVersion": "go1.27.1",
+  "govulncheckVersion": "v1.8.0",
+  "syftVersion": "1.54.1",
+  "cosignVersion": "v3.1.3",
+  "artifactCount": 18,
+  "sbomComponentCounts": {
+    "spawn-runner-linux-arm64.cdx.json": 58,
+    "manager-linux-arm64.cdx.json": 66,
+    "spawn-runner-linux-amd64.cdx.json": 58,
+    "manager-linux-amd64.cdx.json": 66
+  },
+  "ephemeralTestKeyOnly": true,
+  "productionReleaseSigned": false,
+  "vendorRuntimeIncluded": false,
+  "published": false,
+  "checks": [
+    {
+      "check": "signed-inventory",
+      "passed": true
+    },
+    {
+      "check": "wrong-trusted-key",
+      "passed": true
+    },
+    {
+      "check": "manifest-tamper",
+      "passed": true
+    },
+    {
+      "check": "same-size-binary-tamper",
+      "passed": true
+    },
+    {
+      "check": "missing-artifact",
+      "passed": true
+    },
+    {
+      "check": "symlink-artifact",
+      "passed": true
+    },
+    {
+      "check": "unlisted-artifact",
+      "passed": true
+    },
+    {
+      "check": "candidate-cannot-supply-trust-key",
+      "passed": true
+    },
+    {
+      "check": "restored-candidate",
+      "passed": true
+    }
+  ],
+  "compiledDependencyCoverage": {
+    "manager-linux-amd64": {
+      "compiledModules": 63,
+      "missingFromSBOM": []
+    },
+    "manager-linux-arm64": {
+      "compiledModules": 63,
+      "missingFromSBOM": []
+    },
+    "spawn-runner-linux-amd64": {
+      "compiledModules": 55,
+      "missingFromSBOM": []
+    },
+    "spawn-runner-linux-arm64": {
+      "compiledModules": 55,
+      "missingFromSBOM": []
+    }
+  },
+  "dirtySourceDefaultRejected": true,
+  "packagedChartLintPassedWithPinnedImage": true,
+  "knownVulnerabilityGateRejected": {
+    "fixtureModule": "golang.org/x/text@v0.3.7",
+    "advisory": "GO-2022-1059",
+    "symbol": "language.ParseAcceptLanguage",
+    "analysisOnly": true
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "fleetUID": "030776cf-9537-442e-8071-a2c4e895bd60",
+  "policyDigest": "d0cdf1153437799f7933f4b7fb1fdf755d84b8ad3e9dd7fccefac196fa650008",
+  "results": {
+    "network-control": [
+      {
+        "public": {
+          "exit": 0,
+          "http": "301"
+        },
+        "private": {
+          "exit": 0,
+          "http": "200"
+        },
+        "kubernetes": {
+          "exit": 0,
+          "http": "403"
+        },
+        "metadata": {
+          "exit": 7,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 7,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      },
+      {
+        "public": {
+          "exit": 0,
+          "http": "301"
+        },
+        "private": {
+          "exit": 0,
+          "http": "200"
+        },
+        "kubernetes": {
+          "exit": 0,
+          "http": "403"
+        },
+        "metadata": {
+          "exit": 7,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 7,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      }
+    ],
+    "network-fresh-1": [
+      {
+        "public": {
+          "exit": 28,
+          "http": "000"
+        },
+        "private": {
+          "exit": 28,
+          "http": "000"
+        },
+        "kubernetes": {
+          "exit": 28,
+          "http": "000"
+        },
+        "metadata": {
+          "exit": 28,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 28,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      },
+      {
+        "public": {
+          "exit": 28,
+          "http": "000"
+        },
+        "private": {
+          "exit": 28,
+          "http": "000"
+        },
+        "kubernetes": {
+          "exit": 28,
+          "http": "000"
+        },
+        "metadata": {
+          "exit": 28,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 28,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      }
+    ],
+    "network-fresh-2": [
+      {
+        "public": {
+          "exit": 28,
+          "http": "000"
+        },
+        "private": {
+          "exit": 28,
+          "http": "000"
+        },
+        "kubernetes": {
+          "exit": 28,
+          "http": "000"
+        },
+        "metadata": {
+          "exit": 28,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 28,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      },
+      {
+        "public": {
+          "exit": 28,
+          "http": "000"
+        },
+        "private": {
+          "exit": 28,
+          "http": "000"
+        },
+        "kubernetes": {
+          "exit": 28,
+          "http": "000"
+        },
+        "metadata": {
+          "exit": 28,
+          "http": "000"
+        },
+        "pod-identity": {
+          "exit": 28,
+          "http": "000"
+        },
+        "proxy_allowed": {
+          "exit": 0,
+          "http": "404"
+        },
+        "proxy_private": {
+          "exit": 56,
+          "http": "000"
+        },
+        "proxy_ip": {
+          "exit": 56,
+          "http": "000"
+        }
+      }
+    ]
+  },
+  "limits": "Isolated synthetic Cilium result; not downstream cluster approval or vendor session acceptance. DNS is allowed separately. Approved API HTTPS verified using normal TLS CA validation; direct probes use -k to isolate network reachability.",
+  "cluster": {
+    "kubernetes": "1.37.0",
+    "cilium": "1.20.2",
+    "certManager": "1.21.2",
+    "architecture": "arm64",
+    "synthetic": true
+  },
+  "runtimeImage": "docker.io/library/claude-cloud-runtime@sha256:5028a6a5ec4c96cd7d849faaa8039ee66307c9140b6152c70b889ff674e41176",
+  "policyDeniedFlows": {
+    "network-fresh-1": [
+      {
+        "destination": "1.1.1.1",
+        "port": 443
+      },
+      {
+        "destination": "10.244.0.230",
+        "port": 8080
+      },
+      {
+        "destination": "169.254.169.254",
+        "port": 80
+      },
+      {
+        "destination": "169.254.170.23",
+        "port": 80
+      },
+      {
+        "destination": "172.18.0.3",
+        "port": 6443
+      }
+    ],
+    "network-fresh-2": [
+      {
+        "destination": "1.1.1.1",
+        "port": 443
+      },
+      {
+        "destination": "10.244.0.230",
+        "port": 8080
+      },
+      {
+        "destination": "169.254.169.254",
+        "port": 80
+      },
+      {
+        "destination": "169.254.170.23",
+        "port": 80
+      },
+      {
+        "destination": "172.18.0.3",
+        "port": 6443
+      }
+    ]
+  }
+}

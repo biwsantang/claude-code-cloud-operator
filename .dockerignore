@@ -1,0 +1,6 @@
+.git
+wiki
+bin
+**/*_test.go
+charts
+build

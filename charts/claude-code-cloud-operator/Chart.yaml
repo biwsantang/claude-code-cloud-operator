@@ -1,0 +1,12 @@
+apiVersion: v2
+name: claude-code-cloud-operator
+description: Namespace-scoped Claude Code Fleet and durable WorkOrder operator
+type: application
+home: https://github.com/biwsantang/claude-code-cloud-operator
+sources:
+- https://github.com/biwsantang/claude-code-cloud-operator
+annotations:
+  org.opencontainers.image.source: https://github.com/biwsantang/claude-code-cloud-operator
+version: 0.1.0
+appVersion: 0.1.0-dev
+kubeVersion: '>=1.33.0-0'

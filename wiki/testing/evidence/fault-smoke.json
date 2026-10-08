@@ -1,0 +1,163 @@
+{
+  "testedAt": "2026-10-07T07:51:42.223443+00:00",
+  "kubernetes": "v1.36.4",
+  "nodeImage": "kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed",
+  "images": {
+    "manager": "docker.io/library/claude-cloud-manager@sha256:744729f1339e2fe53e234d184be936971e51553b0a7890995b466c5ab73fe095",
+    "hook": "docker.io/library/claude-cloud-hook@sha256:a66e4fc8bec59077b5f5f697c7946125fbc212a2b9a2d1c994f9dfdf8e19aa47",
+    "fixture": "docker.io/library/claude-cloud-fault-fixture@sha256:149be6b5feeaf2e88956991c328fb8ddf51ebf46fc5e3db5147451f8a5f70f08"
+  },
+  "sourceBaseCommit": "59d970e8147c2f50f480a2c32058fa845d1d41ef",
+  "fixtureSHA256": "665972b4ab7e601793aba526719e8a6d813b82f085c28a37b8c0833c44e9b945",
+  "loadedImageTargetsVerified": true,
+  "liveVendorDispatch": false,
+  "networkConformance": false,
+  "productionStartupP99": false,
+  "checks": [
+    {
+      "check": "physical-batch",
+      "distinctOrders": 16,
+      "redeliverySameUID": true
+    },
+    {
+      "check": "synthetic-credential-rotation",
+      "connectedDegraded": true,
+      "missingKeyDisabledPolling": true,
+      "acceptedRunnerPreserved": true
+    },
+    {
+      "check": "scheduling-exhaustion",
+      "unschedulable": true,
+      "expiryCleanup": true,
+      "terminalReplayNoRecreation": true,
+      "freshOrderRuns": true
+    },
+    {
+      "check": "physical-api-outage",
+      "apiUnavailable": true,
+      "hookRetryable": true,
+      "acceptedUIDsPreserved": true,
+      "sameOrderRecovery": true
+    },
+    {
+      "check": "physical-node-loss",
+      "stoppedNodeUnknown": true,
+      "nodeAdministrativelyDecommissioned": true,
+      "orphanPodGC": true,
+      "lostOrderNotReplaced": true,
+      "freshNodeAndOrderRecover": true
+    },
+    {
+      "check": "metadata-audit",
+      "allOrdersOnePodPOST": true,
+      "requestOrResponseBodiesCaptured": false
+    },
+    {
+      "check": "abort-retention",
+      "ownedExecutionRemoved": true,
+      "retentionFinalizerPreserved": true
+    }
+  ],
+  "orders": {
+    "batch-0": {
+      "name": "order-bc540667407aa503432d6f973fd0f22fa90aaa8313f24e7d",
+      "podUID": "d26d43c1-bbc1-4bee-ada0-3800ece06d06",
+      "podCreateRequests": 1
+    },
+    "batch-1": {
+      "name": "order-859f06aa0053a85d8d938f09eb367dbe195ab55fefd6dcd9",
+      "podUID": "b3699e2d-9865-4e74-8925-612cf5092302",
+      "podCreateRequests": 1
+    },
+    "batch-2": {
+      "name": "order-92970af1d394b460e2566a382e69640b0198fdbe87612772",
+      "podUID": "0101a3c1-d446-499b-9667-78e5e8f67829",
+      "podCreateRequests": 1
+    },
+    "batch-3": {
+      "name": "order-9debff1246e97bf50602a54ff2f9f7a15b2a819146cbbb78",
+      "podUID": "bb095446-817e-48e7-807a-39ac3fac60e8",
+      "podCreateRequests": 1
+    },
+    "batch-4": {
+      "name": "order-2da1855d5afa79f049ba469a6a0b3ab6c9650834124f29fa",
+      "podUID": "26b6698d-cc51-4658-87ce-34ede5d58f6a",
+      "podCreateRequests": 1
+    },
+    "batch-5": {
+      "name": "order-68d5822fc938265ff2a55bf3a4af2552fd505d5b94886c08",
+      "podUID": "3d81f2d2-9108-400a-97a4-420f2f45f4e0",
+      "podCreateRequests": 1
+    },
+    "batch-6": {
+      "name": "order-3fb1f2c0b66c04e9296c3ec62a871deee6a99048a2cbf2ca",
+      "podUID": "7af04852-65dd-4c24-878e-1daf80904fcd",
+      "podCreateRequests": 1
+    },
+    "batch-7": {
+      "name": "order-61749150c589f4e351758b2988fae37486f246044fbce516",
+      "podUID": "75c31aa5-082a-41cd-844f-397d686a60e9",
+      "podCreateRequests": 1
+    },
+    "batch-8": {
+      "name": "order-34d0dedf613fcccdf47472148c80b3ebb8e886cb25278438",
+      "podUID": "e0c305e9-8fca-4030-8e5c-c7237c3e16a6",
+      "podCreateRequests": 1
+    },
+    "batch-9": {
+      "name": "order-607d78997b4d462d392e08ac90b9ff1716db05fc413f92dd",
+      "podUID": "600666fa-2b15-4770-a7d8-6427050de2ea",
+      "podCreateRequests": 1
+    },
+    "batch-10": {
+      "name": "order-fb3194afcfc79a0c52407ebe690651b2ca9021325f31aab3",
+      "podUID": "bcf535ee-31c6-4305-ac1e-94154d4712d5",
+      "podCreateRequests": 1
+    },
+    "batch-11": {
+      "name": "order-4c90623ac6612e0e3e127346e19afb9d840c8621fa405749",
+      "podUID": "afeca78a-82f2-4427-a401-1e5ac58bc7ff",
+      "podCreateRequests": 1
+    },
+    "batch-12": {
+      "name": "order-36af725abfca8ba0b7100d252a928aed44fc6b5a9f5dee70",
+      "podUID": "7cddc890-5e15-4719-9650-5af7b9866e5c",
+      "podCreateRequests": 1
+    },
+    "batch-13": {
+      "name": "order-602b35250dcd2d0c9d3144b2f5d795cb4d7e38f343ad5fd2",
+      "podUID": "8ce1c4c1-bcb3-449d-9ace-47d3da3f7ff4",
+      "podCreateRequests": 1
+    },
+    "batch-14": {
+      "name": "order-5915dd3c36e7b48fdf1a392651f7297fc16e2faf6c5f6adc",
+      "podUID": "e839e7e5-f5d3-4fe6-9c69-e185382d8ed2",
+      "podCreateRequests": 1
+    },
+    "batch-15": {
+      "name": "order-6307c23a175021ede56a2b08d1212a08ce9a633c64da5a63",
+      "podUID": "8eacb830-6eb3-4f1e-a17f-1169cdce8a45",
+      "podCreateRequests": 1
+    },
+    "scheduling-exhaustion": {
+      "name": "order-a4e3604609edfe2b9a873670647e7f1bbcf7037800555d7a",
+      "podUID": "2f89e37a-6787-42ae-8ea7-34e3ffbce0a5",
+      "podCreateRequests": 1
+    },
+    "scheduling-recovery": {
+      "name": "order-cdfffb8eeb76e1d00f9a1a7d5c392c11e171b11122eb14c6",
+      "podUID": "de91b6ef-69e5-42f0-ab6f-49d5cd8bb766",
+      "podCreateRequests": 1
+    },
+    "api-outage": {
+      "name": "order-fafd45056d12b060fb9e1561dd52fdeae214dee3700f10d8",
+      "podUID": "c5921540-09ba-4e7f-9044-6d3085117af6",
+      "podCreateRequests": 1
+    },
+    "node-recovery": {
+      "name": "order-597d6bdcd3bb3ea7b4d9d96a8e7535db37fad87be228e991",
+      "podUID": "d2da1a8a-23a2-4a4f-b499-5cbb866288a8",
+      "podCreateRequests": 1
+    }
+  }
+}

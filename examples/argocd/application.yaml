@@ -1,0 +1,25 @@
+# Replace the illustrative RC version with a published release.
+# Namespace and cert-manager must exist before syncing this Application.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: claude-code-cloud-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  # Omit cascading deletion: operator uninstall requires a completed Fleet drain.
+spec:
+  project: default
+  source:
+    repoURL: ghcr.io/biwsantang/charts
+    chart: claude-code-cloud-operator
+    targetRevision: 0.1.0-rc.1
+    helm:
+      releaseName: cloud-operator
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cloud-operator-system
+  syncPolicy:
+    syncOptions:
+    - ServerSideApply=true
+    - FailOnSharedResource=true

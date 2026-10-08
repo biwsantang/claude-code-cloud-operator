@@ -1,0 +1,206 @@
+{
+  "recordedAt": "2026-10-08T03:42:40.750859+00:00",
+  "sourceBaseCommit": "1e9dd30114d9498659f3b3898ee34f8cabbb2a7d",
+  "sourceDirty": true,
+  "selectedSourceSHA256": {
+    "internal/hook/hook.go": "cb6806ce0296a130d3f613989d70fc4a3e897b83aca1f2c11b36e15bbd96a6fb",
+    "internal/builders/pod.go": "918f93d000fd7aaeed3682475302bcaf83f429067fdbdd6887d0fa4f471f3557",
+    "internal/controller/integration_test.go": "b84130272bba4f87a297fb28bb418341275da2f3339c08e457b5e76d35bb4788",
+    "Dockerfile": "eb2b27851c866080d2b1b4c24568254497e53f21828114c7a08e794c685740fd",
+    "go.mod": "e96a32d78b6348ec1a31c7d4693046d806a85c4f6ad9e1ca9f883c66750fc314",
+    "go.sum": "1cabcf5061c5d3cc8e8258df6b46ea7c179478a25bbffd3d65129aedfc3eb8f5"
+  },
+  "platform": "linux/arm64",
+  "claudeVersion": "2.1.285",
+  "cluster": {
+    "kind": "0.33.0",
+    "kubernetes": "1.37.0",
+    "cilium": "1.20.2",
+    "certManager": "1.21.2",
+    "disposable": true
+  },
+  "images": {
+    "hook": "docker.io/library/claude-cloud-hook@sha256:232979f85b0ada3286485ef28bd7a4c507f66caa4d737feeff350ad234d17402",
+    "manager": "docker.io/library/claude-cloud-manager@sha256:639b5fe29d88ec00cd1455aa05121f5147a62fd003d894a7228a588cd8190b5d",
+    "runtime": "docker.io/library/claude-cloud-runtime@sha256:c2f8f9f72e0f2d43c999952168c00e4c844e2ce7ed26a8f51c555659383d4811"
+  },
+  "imageContentDigestVerified": true,
+  "testRepository": "user-authorized private fixture; no edits, commits or pushes",
+  "nativeContainerTrial": {
+    "originalPhases": [
+      {
+        "phase": "runtime",
+        "passed": true
+      },
+      {
+        "phase": "followup",
+        "passed": true
+      }
+    ],
+    "gracefulExitCode": 0,
+    "stopElapsedSeconds": 2.52,
+    "newContainerVerified": true,
+    "workspaceReused": false,
+    "sessionIDHash": "d5686ffb14f4ff7bb3b01584c029b9b692db960e45dd25a9eac08d4bc87bf5ac",
+    "replacementPhases": [
+      {
+        "phase": "recovery",
+        "passed": true
+      }
+    ],
+    "finalCleanupExitCode": 0,
+    "requestedToolCommandsVerified": true
+  },
+  "operatorTrial": {
+    "fleetConnected": true,
+    "fleetReady": true,
+    "capturedPhases": [
+      {
+        "phase": "recovery",
+        "passed": true
+      },
+      {
+        "phase": "followup",
+        "passed": true
+      },
+      {
+        "phase": "runtime",
+        "passed": true
+      }
+    ],
+    "sdkToolProof": {
+      "bashToolObserved": true,
+      "requestedCommandsObserved": true
+    },
+    "configMaterialization": [
+      {
+        "initExitCode": 0,
+        "config": {
+          "sourceRegular": true,
+          "seededSessionConfigs": 1,
+          "sessionConfigCount": 1
+        },
+        "podNameHash": "9a59be79d5edea33011487e3a0c1faf084d99a48a51e570e87335b810156823e"
+      },
+      {
+        "initExitCode": 0,
+        "config": {
+          "sourceRegular": true,
+          "seededSessionConfigs": 1,
+          "sessionConfigCount": 1
+        },
+        "podNameHash": "91defe738c948039cb25742a4251b70a0288ee0d0ebb70057a51911dd9371c34"
+      }
+    ],
+    "recovery": {
+      "oldPodUIDHash": "6fbbce8de2ba8747f51243ec0a92c5bb4572ce886431fbf74a47bb31c03e48f5",
+      "oldReceiptPhase": "Lost",
+      "launchFencePreserved": true,
+      "oldPodAbsent": true,
+      "newPodUIDHash": "6203355e7a421a70a903770f547aa258710373fb18c4c61a5ecde910645edc74",
+      "freshWorkOrder": true,
+      "restartCount": 0
+    },
+    "gracefulShutdown": {
+      "exitCode": 0,
+      "reason": "Completed",
+      "elapsedSeconds": 13.94,
+      "configuredGraceSeconds": 120
+    },
+    "fixedHookObservations": [
+      {
+        "hookAcceptedOccurrences": 3,
+        "receiptCompletionFailedOccurrences": 0,
+        "redeliveredOccurrences": 0
+      }
+    ]
+  },
+  "network": {
+    "policyDigest": "5b127876dd5b352900081bd7584942a39f93d0fec9b99b43f0f29f43aa4253bd",
+    "freshPodCount": 2,
+    "requiredChecks": {
+      "directDenied": true,
+      "privateDenied": true,
+      "metadataDenied": true,
+      "kubernetesDenied": true,
+      "proxyAllowed": true,
+      "proxyDenied": true,
+      "freshPodTested": true
+    },
+    "cniPolicyDeniedDestinations": {
+      "public": true,
+      "private": true,
+      "kubernetes": true,
+      "metadata": true,
+      "podIdentity": true
+    },
+    "apiDenialVerifiedAfterServiceDNAT": true,
+    "rawEvidenceSHA256": {
+      "network-smoke.log": "8a3c98ee51265b0a1423f68b33adb32e176923d9d902bd8d7437d0559de3bde4",
+      "cilium-drop-snapshot.log": "8ba7f6ecb5472eb7124056acf40e4272b92b1516743b6269d7d665fae2978624"
+    }
+  },
+  "regressions": {
+    "realAPIStatusConflictReproducedBeforeFix": true,
+    "boundedConflictRetryPassedAfterFix": true,
+    "makeVerifyPassed": true,
+    "fullAPI133RaceSuitePassed": true,
+    "nativeRestrictedHookSmokePassed": true
+  },
+  "operatorScans": {
+    "manager": {
+      "matches": 0,
+      "ignoredMatches": 0,
+      "reportSHA256": "9180a9ab105be80fcd1ad44bb2056f307ecd0e69626e2b1fa1261f0e15b37536"
+    },
+    "hook": {
+      "matches": 0,
+      "ignoredMatches": 0,
+      "reportSHA256": "71f7fd461f60a7c38a6ab5d945022dee873e1bada1fe53fd0b97a4c34fde0169"
+    }
+  },
+  "additionalFreshSession": {
+    "cloneStarted": true,
+    "stoppedWhileCloning": true,
+    "outcomeNotCounted": true
+  },
+  "limits": [
+    "Dedicated local ARM64 trial, not production acceptance or downstream approval",
+    "No live Git push or concurrent-user isolation test",
+    "No real server-side credential revocation",
+    "No target startup p99 or lease tuning",
+    "No tagged artifact publication, redistribution approval or downstream migration",
+    "Guarantee is one operator submission per work order, not exactly-once execution across vendor-issued fresh orders"
+  ],
+  "cleanup": {
+    "allOwnedSessionPodsRemoved": true,
+    "environmentSecretRemoved": true,
+    "disposableKindClusterRemoved": true,
+    "unrelatedClusterStillRunning": true,
+    "externalEnvironmentDeleted": false,
+    "hostOAuthRevoked": false,
+    "stoppedRunners": [
+      {
+        "podNameHash": "1497a2cfc8808dd58326f602431dedaeba115f521b65ca2bcdbff43e85caae37",
+        "exitCode": 0,
+        "reason": "Completed",
+        "elapsedSeconds": 3.44,
+        "graceSeconds": 120
+      },
+      {
+        "podNameHash": "9a59be79d5edea33011487e3a0c1faf084d99a48a51e570e87335b810156823e",
+        "exitCode": 0,
+        "reason": "Completed",
+        "elapsedSeconds": 4.57,
+        "graceSeconds": 120
+      },
+      {
+        "podNameHash": "3df8fd85c11394cc326a38db1314ec7c25c25b06cd8cf8276361128aacad8e48",
+        "exitCode": 0,
+        "reason": "Completed",
+        "elapsedSeconds": 4.75,
+        "graceSeconds": 120
+      }
+    ]
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "testedAt": "2026-10-07T08:57:05.950765+00:00",
+  "sourceCommit": "1641e62cf89ea0d017a0b1d28da29f0acfa2ff4f",
+  "sourceTreeSHA256": "8ee2a2563f9b3337681506880d4007ae6c8e2660d58039909cc9992c4cd220a5",
+  "sourceDirty": false,
+  "candidateManifestSHA256": "f2331d1f95b7e2225de317b2f725f960c8cc6d06df7aeec2863db183eae0c295",
+  "goVersion": "go1.27.1",
+  "govulncheckVersion": "v1.8.0",
+  "syftVersion": "1.54.1",
+  "cosignVersion": "v3.1.3",
+  "artifactCount": 20,
+  "sbomComponentCounts": {
+    "spawn-runner-linux-arm64.cdx.json": 58,
+    "manager-linux-arm64.cdx.json": 66,
+    "spawn-runner-linux-amd64.cdx.json": 58,
+    "manager-linux-amd64.cdx.json": 66
+  },
+  "ephemeralTestKeyOnly": true,
+  "productionReleaseSigned": false,
+  "vendorRuntimeIncluded": false,
+  "published": false,
+  "checks": [
+    {
+      "check": "signed-inventory",
+      "passed": true
+    },
+    {
+      "check": "wrong-trusted-key",
+      "passed": true
+    },
+    {
+      "check": "manifest-tamper",
+      "passed": true
+    },
+    {
+      "check": "same-size-binary-tamper",
+      "passed": true
+    },
+    {
+      "check": "third-party-notices.json-tamper",
+      "passed": true
+    },
+    {
+      "check": "third-party-notices.tar.gz-tamper",
+      "passed": true
+    },
+    {
+      "check": "missing-artifact",
+      "passed": true
+    },
+    {
+      "check": "symlink-artifact",
+      "passed": true
+    },
+    {
+      "check": "unlisted-artifact",
+      "passed": true
+    },
+    {
+      "check": "candidate-cannot-supply-trust-key",
+      "passed": true
+    },
+    {
+      "check": "restored-candidate",
+      "passed": true
+    }
+  ],
+  "noticeInventory": {
+    "moduleCount": 63,
+    "compiledModuleCoverageByBinary": {
+      "spawn-runner-linux-amd64": 55,
+      "manager-linux-amd64": 63,
+      "spawn-runner-linux-arm64": 55,
+      "manager-linux-arm64": 63
+    },
+    "moduleNoticeFileCount": 102,
+    "toolchainNoticeFileCount": 38,
+    "originalNoticeFilesMatched": 140,
+    "archiveSHA256": "fa39cf7f11d353c92e582aad7336c10b2c142f7d19218a21071693fc8c1e915e",
+    "indexSHA256": "1491db380d4230d4f897f194fa81df4380753e63349abdbd1605ee112b86bb98",
+    "moduleIntegrityVerifiedBeforeAndAfter": true,
+    "archiveReproducible": true,
+    "outOfBuildListModuleRejectedBeforeCollection": true,
+    "licenseReviewApproved": false
+  }
+}

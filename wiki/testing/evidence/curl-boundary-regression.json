@@ -1,0 +1,114 @@
+{
+  "recordedAt": "2026-10-07T18:52:23+07:00",
+  "sourceBaseCommit": "3492172287ca06030b12a668795318167fe05466",
+  "sourceFilesSHA256": {
+    "hack/runtime-curl-smoke.py": "02008d0f0c7110c1d0114ec53a619c8d9e2f0493e8388d9fc15a46913f0a52b9",
+    "hack/runtime-smoke.sh": "dadb60882f5b2f951562c4a6e3d1e377d704902e9eee14959d5b3f6e12deaf5f",
+    "images/runtime/Dockerfile": "4bdd93cd4c20a24c64a7faef11c296d44331aff906e2f4c302d1e582338db10a",
+    "images/runtime/build-curl.py": "b275975e9a7ae7d775f44870e4f3023771fce9b881f0b4b66973b4d7c1427600"
+  },
+  "platform": "linux/arm64",
+  "dockerHostArchitecture": "aarch64",
+  "images": {
+    "baseline": {
+      "tag": "claude-cloud-runtime:openssh",
+      "imageID": "sha256:da5b2a66ca81a1e2b0f99ec1312ee266c7e21663cccc8cffeba9533216c43e86",
+      "architecture": "arm64",
+      "runtimeVersions": {
+        "machine": "aarch64",
+        "cli": "curl 8.14.1 (aarch64-unknown-linux-gnu) libcurl/8.14.1 OpenSSL/3.5.7 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 nghttp3/1.8.0 librtmp/2.3 OpenLDAP/2.6.10",
+        "libraries": {
+          "openssl": "libcurl/8.14.1 OpenSSL/3.5.7 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 nghttp3/1.8.0 librtmp/2.3 OpenLDAP/2.6.10",
+          "gnutls": "libcurl/8.14.1 GnuTLS/3.8.9 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 ngtcp2/1.11.0 nghttp3/1.8.0 librtmp/2.3 OpenLDAP/2.6.10"
+        }
+      }
+    },
+    "candidate": {
+      "tag": "claude-cloud-runtime:curl",
+      "imageID": "sha256:98c4d7fbf59e4e2393fd9bb56cd794d8e921021f3c8d2037915b5e87207bf3b7",
+      "architecture": "arm64",
+      "runtimeVersions": {
+        "machine": "aarch64",
+        "cli": "curl 8.22.0 (aarch64-unknown-linux-gnu) libcurl/8.22.0 GnuTLS/3.8.9 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 ngtcp2/1.11.0 nghttp3/1.8.0 mit-krb5/1.21.3 OpenLDAP/2.6.10",
+        "libraries": {
+          "openssl": "libcurl/8.22.0 OpenSSL/3.5.7 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 mit-krb5/1.21.3 OpenLDAP/2.6.10",
+          "gnutls": "libcurl/8.22.0 GnuTLS/3.8.9 zlib/1.3.1 brotli/1.1.0 zstd/1.5.7 libidn2/2.3.8 libpsl/0.21.2 libssh2/1.11.1 nghttp2/1.64.0 ngtcp2/1.11.0 nghttp3/1.8.0 mit-krb5/1.21.3 OpenLDAP/2.6.10"
+        }
+      }
+    }
+  },
+  "posture": {
+    "UID": 1000,
+    "readOnlyRoot": true,
+    "network": "none",
+    "capabilitiesDropped": "ALL",
+    "noNewPrivileges": true,
+    "tmpfsBytes": 67108864,
+    "publishedHostPorts": false,
+    "realCredentialsUsed": false
+  },
+  "baseline": {
+    "exitCode": 1,
+    "failureCount": 8,
+    "logSHA256": "6941fb8f8da3d1845bf385c3e9880e368a0b353bc043d6c5ec0eb1fd242d403e",
+    "failures": [
+      "openssl origin Digest auth disclosure",
+      "gnutls origin Digest auth disclosure",
+      "openssl environment-selected proxy Digest disclosure",
+      "gnutls environment-selected proxy Digest disclosure",
+      "openssl trailing-dot public-suffix cookie disclosure",
+      "gnutls trailing-dot public-suffix cookie disclosure",
+      "CLI trailing-dot public-suffix cookie disclosure",
+      "CLI mismatched netrc password disclosure"
+    ]
+  },
+  "candidate": {
+    "boundaryExitCode": 0,
+    "boundaryLogSHA256": "c723c8206c97ccbd47f21ff1fa770a53eb2c4bb067f498fb8c761b38b27f89d4",
+    "fullRestrictedSmokeExitCode": 0,
+    "fullSmokeLogSHA256": "8d73df3fc35a943ce5bb6c791e79dc1abb258905bfb81770244f0176cfed5824"
+  },
+  "controls": [
+    "real Digest response validated using synthetic realm/nonce/user/password and request target",
+    "two origin hostnames and ports with first request at receiving origin observed",
+    "same easy handle with http_proxy environment changed between authenticated transfers",
+    "PSL-enabled libraries and CLI; legitimate host-scoped cookie remains usable",
+    "same-host cookie withheld from unrelated host",
+    "CLI matching-netrc user authenticates successfully"
+  ],
+  "advisoriesBehaviorTested": [
+    "CVE-2026-11856",
+    "CVE-2026-8927",
+    "CVE-2026-8924",
+    "CVE-2026-8926"
+  ],
+  "newNativeAMD64EvidencePending": true,
+  "previousRuntimeEvidence": "curl-runtime-smoke.json",
+  "previousCriticalGateStillFailed": true,
+  "scannerIgnoreRulesAdded": false,
+  "reviewedVEXStatement": false,
+  "remainingUntestedAdvisories": [
+    "CVE-2026-10536",
+    "CVE-2026-18924",
+    "CVE-2026-19931"
+  ],
+  "releaseApproved": false,
+  "vendorAcceptancePassed": false,
+  "published": false,
+  "localVerification": {
+    "makeVerify": true,
+    "makeTestAPI": "1.33.0",
+    "makeVerifyLogSHA256": "068475acf8a04f5cdfac20ef5a29c21c61503a0b9c0cb416692c2f975ecd9b5f",
+    "makeTestAPILogSHA256": "b796f4bbad187befe617d211c0cf59e4f3640ce20ccce1698e96fa6185fa491d",
+    "pythonTestCount": 14,
+    "gitleaks": {
+      "exitCode": 1,
+      "findingCount": 4,
+      "reviewedFalsePositiveCount": 4,
+      "unresolvedFindingCount": 0,
+      "newIgnoreRules": false,
+      "classification": "unchanged public OpenSSH signer/archive/binary hashes; source and prior evidence independently bound",
+      "redactedReportSHA256": "252af705dc8deb7b2505ef6593ee65a8d07bbb3ff5b77d946c352e45487a7284"
+    }
+  }
+}

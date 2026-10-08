@@ -1,0 +1,130 @@
+{
+  "recordedAt": "2026-10-07T15:01:01.870524+00:00",
+  "profile": "maintained Ubuntu 24.04 devcontainer with official Node SDK and distro Python/curl/OpenSSH",
+  "sourceBaseCommit": "0de20e7b9853e9889ab7621c6ece177ac87944e4",
+  "sourceDirty": true,
+  "platform": "linux/arm64",
+  "imageConfigID": "sha256:fcdb6729a55dadb3604970d60fb27f2c28b480d7668a84c16bd91b4afd1f063f",
+  "sourceSHA256": {
+    "images/runtime/Dockerfile": "ea57917a4308e7152a50a74d00893e97d6fadc054fa87598e8ba09de2f06264c",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "hack/runtime-smoke.sh": "2c687af580012ecc056a65cea7f49d2215527f609ebfc0ca291cfbe4407954f8",
+    "hack/runtime-curl-smoke.py": "5a1a654035909c6e108b1a504b3b9a62f93e51da51247736e59b180ab2cdaee9",
+    "hack/runtime-python-smoke.py": "ce7e7f71ce48f3ef5a59cbc45a0194e212fce1ec64bdbf8b482e19cd9f6ba49a",
+    "hack/runtime-ssh-smoke.py": "57280b4b766d7d0949699b68fe8278985d7a9fab8dcb34727dc8c83dc008a43e",
+    "hack/npm-security-smoke.cjs": "7a5a68495cbd1de7940aa361bceef6e1fb55ddfb8345dceb76ef28e9158e23d4"
+  },
+  "grypeVersion": "0.120.1",
+  "syftVersion": "1.54.1",
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "scope": "squashed",
+  "userIgnoreRules": [],
+  "effectiveDefaultKernelHeaderRules": [
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "kernel-headers",
+        "version": "",
+        "language": "",
+        "type": "rpm",
+        "location": "",
+        "upstream-name": "kernel"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux(-.*)?-headers-.*",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux.*"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux-libc-dev",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    },
+    {
+      "vulnerability": "",
+      "include-aliases": false,
+      "reason": "",
+      "namespace": "",
+      "fix-state": "",
+      "package": {
+        "name": "linux-kbuild-.*",
+        "version": "",
+        "language": "",
+        "type": "deb",
+        "location": "",
+        "upstream-name": "linux.*"
+      },
+      "vex-status": "",
+      "vex-justification": "",
+      "match-type": "exact-indirect-match"
+    }
+  ],
+  "ignoredMatchCount": 3846,
+  "matchesBySeverity": {
+    "Critical": 0,
+    "High": 4,
+    "Medium": 628,
+    "Low": 109,
+    "Negligible": 12,
+    "Unknown": 0
+  },
+  "criticalGatePassed": true,
+  "sbomArtifactCount": 425,
+  "rawReportSHA256": "7d262ac9da36af136d24ef90b35ae7c9f69c6479f792ad0fc7e6e8810a34afef",
+  "rawSBOMSHA256": "320d18ae024fddfc6ee1035cd959789660e2d0b56878c50103943591ea1b035f",
+  "functionalSmoke": {
+    "passed": true,
+    "logSHA256": "688bfdde9780307abfc03fdbe460bc7a3a7f1aa58542fa1368e3ccbb9792719f"
+  },
+  "securitySmoke": {
+    "passed": false,
+    "logSHA256": "a45f628bf4d11ea0487c124fbe374ba48ebb7449afb6dca9f63d4f6b7206f008",
+    "failures": [
+      "Both installed libcurl variants sent a mismatched netrc user password",
+      "Unmodified npm brace-expansion failed deep-pattern probe with RangeError"
+    ]
+  },
+  "nativeAMD64Verified": false,
+  "releaseApproved": false,
+  "vendorAcceptancePassed": false,
+  "published": false
+}

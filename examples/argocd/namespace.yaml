@@ -1,0 +1,10 @@
+# Manage separately from the operator chart. Drain before intentional removal.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cloud-operator-system
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: v1.33

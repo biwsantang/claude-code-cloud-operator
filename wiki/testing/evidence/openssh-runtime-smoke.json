@@ -1,0 +1,418 @@
+{
+  "testedAt": "2026-10-07T17:57:02+07:00",
+  "sourceBaseCommit": "46f3a646a43c9e6890b146365ef4e8bfae95d048",
+  "sourceFilesSHA256": {
+    "images/runtime/Dockerfile": "2e361dd85022f4936a53b128347f3d4999aefce894e2a55dee2828aa230aa1b7",
+    "images/runtime/build-openssh.py": "88a2c7776062ceb9e6b79d043c7940b325757d2d4086cdbcf7e2e23250c0af84",
+    "images/runtime/install-native.sh": "c82b8536f49b09022efd8520dee0155da58cf04647d76f009a6bb601b4000034",
+    "images/runtime/install-npm.sh": "d3dd579f1dfaa87aed20b10ed65f2ded14fa97779098a1d90c345114e55dc08b",
+    "images/runtime/install-npm-overrides.py": "67512f5c8370da38fd3db906dc62a3e7ad6646a74a85d49610c6395939aea792",
+    "hack/runtime-smoke.sh": "4c20618988d4b28484f82c590d2671eae45cfdfa13a19d6a1f84e4b57b23f25a",
+    "hack/runtime-ssh-smoke.py": "030973b425e916aaa54c0c28634dc7b482c5f9a6abc8cc100b8bf71182c9d05e",
+    "hack/runtime-python-smoke.py": "6923011778cb7b371c35c333266d94ed863b17b11ce58711d969d25dd3314f32",
+    "hack/npm-security-smoke.cjs": "b8ee71a205748c9dfa86683550fa1ec956956a33f059057712107c6428c49bf1",
+    ".github/workflows/test.yml": "013e4eaefc1fb8e868618684772b4ebf17141c7e95c4a8dfb2d85992fb16ea3f"
+  },
+  "platform": "linux/arm64",
+  "localImageIndexID": "sha256:da5b2a66ca81a1e2b0f99ec1312ee266c7e21663cccc8cffeba9533216c43e86",
+  "imageConfigID": "sha256:22d8bfe66514fafa33da5cf635b17f1624bce972effd08bcbb902f7086540b38",
+  "buildManifestDigest": "sha256:5df4c5fc19596bd0f531325bc8e4c79b62ae93da4eae5af3e640a42a43a107a7",
+  "scannerManifestDigest": "sha256:4dc2b8fbdfac7b8fe36c6e891d20ff10022d0c65b75023aa4b829801535aa41d",
+  "rawReportSHA256": "9d7836e335b9885b95d165e12360417fea2d22e33722bebb758907a62e1bdf0a",
+  "buildLogSHA256": "e48873b1778fe8af28dbbe974f655e8cef31cba975d7d3f402827c664e9c79f4",
+  "smokeLogSHA256": "e327309f905122b68caa59c85466b9bd4df23d1c49c9c82237467c199c7abaf9",
+  "grypeVersion": "0.120.1",
+  "scope": "squashed",
+  "userIgnoreRules": [],
+  "effectiveDefaultKernelHeaderRules": [
+    {
+      "name": "kernel-headers",
+      "version": "",
+      "language": "",
+      "type": "rpm",
+      "location": "",
+      "upstream-name": "kernel"
+    },
+    {
+      "name": "linux(-.*)?-headers-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    },
+    {
+      "name": "linux-libc-dev",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux"
+    },
+    {
+      "name": "linux-kbuild-.*",
+      "version": "",
+      "language": "",
+      "type": "deb",
+      "location": "",
+      "upstream-name": "linux.*"
+    }
+  ],
+  "databaseStatus": {
+    "schemaVersion": "v6.1.10",
+    "from": "https://grype.anchore.io/databases/v6/vulnerability-db_v6.1.10_2026-10-07T00:34:45Z_1791354708.tar.zst?checksum=sha256%3A008449eb30e10988569b3bd54eb46158f33187211ba723f41ed9326ccfa1e174",
+    "built": "2026-10-07T06:31:48Z",
+    "valid": true
+  },
+  "matchesBySeverity": {
+    "Negligible": 95,
+    "Critical": 24,
+    "High": 98,
+    "Medium": 68,
+    "Low": 10,
+    "Unknown": 1
+  },
+  "ignoredMatchCount": 0,
+  "criticalGateExitCode": 2,
+  "criticalGatePassed": false,
+  "criticalFindings": [
+    {
+      "id": "CVE-2026-19931",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-19931",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-19931",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-11856",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-11856",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-11856",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8924",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8924",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8924",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-10536",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-10536",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-10536",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-9079",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-9079",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-9079",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-18924",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-18924",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-18924",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8927",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8927",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8927",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8926",
+      "package": "curl",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8926",
+      "package": "libcurl3t64-gnutls",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    },
+    {
+      "id": "CVE-2026-8926",
+      "package": "libcurl4t64",
+      "version": "8.14.1-2+deb13u5",
+      "fix": {
+        "versions": [],
+        "state": "wont-fix"
+      }
+    }
+  ],
+  "baseline": {
+    "evidence": "trixie-runtime-smoke.json",
+    "rawReportSHA256": "52f6bc167531ed3a68e79003aff22a86624ba14868a0a37c3a16754d0eb3dd4c",
+    "criticalMatchCount": 25,
+    "disappearedCriticalAdvisoryIDs": [
+      "CVE-2026-60002"
+    ],
+    "addedCriticalAdvisoryIDs": []
+  },
+  "opensshBuild": {
+    "version": "10.6p1",
+    "signingKeyFingerprint": "7168B983815A5EEF59A4ADFD2A3F414E736060BA",
+    "assets": {
+      "source": {
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz",
+        "sha256": "a9dc9565dffe8640f64d863cd29a32bc4a3dbdec0566a7fc44c5d6ee767d5f39"
+      },
+      "signature": {
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc",
+        "sha256": "1f8fd46ddb5ec95f5bc9e0d7b0fc34ccea3ef8f94a8e3a5d3911434cce7027cf"
+      },
+      "key": {
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/RELEASE_KEY.asc",
+        "sha256": "c4a6f4692c9b8e75ec096add049fe0314b3ceff9410321f1e85907cf7a864269"
+      }
+    },
+    "configure": [
+      "--prefix=/usr",
+      "--sysconfdir=/etc/ssh",
+      "--libexecdir=/usr/lib/openssh",
+      "--with-mantype=man",
+      "--with-kerberos5",
+      "--with-security-key-builtin",
+      "--with-libedit"
+    ],
+    "clients": [
+      "ssh",
+      "scp",
+      "sftp",
+      "ssh-add",
+      "ssh-agent",
+      "ssh-keygen",
+      "ssh-keyscan"
+    ],
+    "helpers": [
+      "ssh-keysign",
+      "ssh-pkcs11-helper",
+      "ssh-sk-helper"
+    ],
+    "setuidHelpers": false,
+    "debianGSSAPIKeyExchangePatch": false,
+    "binarySHA256": {
+      "ssh": "4ebd3b68a3463f7aaa1fa9704af93dcd3f024c943669833418018c81dc809caa",
+      "scp": "c424a1766badc5abbbc01e0ebee5255ade346d03aa63c121df4ffc719f8a1137",
+      "sftp": "6ff4d41e2cc2760b9022b3daf3d84d1a111eee54ba46358f6d012793edc19a5b",
+      "ssh-add": "74bfbfea606d554593587e170b61410d9ee6e19327ffb2f7affa9683acf206a2",
+      "ssh-agent": "5e763a43a8becbbae78bcd288252f060088ee501f392389fd9a8cb8f23c1785f",
+      "ssh-keygen": "df5333e169fe5f3e817e04c91df292fab40b9fe39b0b6592697fbcabbba4d328",
+      "ssh-keyscan": "ccc7e3feacd314baa2c478900006ce0a7649fecf23af06322bc239d9580a52b3"
+    }
+  },
+  "opensshOriginalLicenseSHA256": "5bb5b160726ef5756e4f32fe95b35249c294962419650f48d05134b486d27ccb",
+  "arm64NativeFullSmokePassed": true,
+  "amd64NativeFullSmokePassed": true,
+  "amd64HardwareCIPending": false,
+  "localAMD64EmulatedBuild": {
+    "passed": false,
+    "reason": "GCC cc1 internal compiler error/segmentation fault during QEMU compilation; no resulting image or acceptance",
+    "failedAttemptLogSHA256": "2bc0fa94376d82bb045d456e33eca5e12e5a73f2d39ad34f8d12480105557c69"
+  },
+  "arm64SBOM": {
+    "syftVersion": "1.54.1",
+    "rawReportSHA256": "7673419d1842bf8bf1a5d3ff0f176ec82f538f2f69d5eb2eabdafc63c119f9d4",
+    "artifactCount": 280,
+    "compiledOpenSSHDetected": false,
+    "compiledOpenSSHInventory": "opensshBuild field and /usr/local/share/claude-runtime/openssh-build.json supplement the automated inventory; absence of scanner matches is not clearance"
+  },
+  "compatibility": {
+    "gssapiAuthenticationConfigured": true,
+    "debianGSSAPIKeyExchangeExtensionIncluded": false,
+    "unknownExtensionRejected": true,
+    "physicalSecurityKeyTested": false,
+    "realSSHConnectionTested": false,
+    "vendorGitTested": false
+  },
+  "releaseApproved": false,
+  "published": false,
+  "vendorAcceptancePassed": false,
+  "targetNodeCPUAcceptance": false,
+  "localVerification": {
+    "makeVerify": true,
+    "makeTestAPI": "1.33.0",
+    "makeVerifyLogSHA256": "203f1ef9bbd32c467134f37d669d3739020a61ded348794abebebb6283f63011",
+    "integrationLogSHA256": "40ac7bd814c5c4f328783c05fb1d8a49bf21d7d2a9be606810e8b274313b4a86",
+    "pythonTestCount": 14,
+    "actionlint": true,
+    "wikiValidation": true,
+    "gitleaks": {
+      "exitCode": 1,
+      "findingCount": 4,
+      "reviewedFalsePositiveCount": 4,
+      "unresolvedFindingCount": 0,
+      "newIgnoreRules": false,
+      "classification": "public upstream signer fingerprint/release archive SHA-256 and source-bound binary SHA-256; no bearer credentials",
+      "redactedReportSHA256": "252af705dc8deb7b2505ef6593ee65a8d07bbb3ff5b77d946c352e45487a7284"
+    }
+  },
+  "testedSourceCommit": "f261cc19b589f10a960ee9a738678138c22445df",
+  "amd64NativeCI": {
+    "runID": 37611163966,
+    "jobID": 112758476250,
+    "sourceCommit": "f261cc19b589f10a960ee9a738678138c22445df",
+    "runner": "GitHub-hosted ubuntu-24.04 AMD64",
+    "jobURL": "https://github.com/biwsantang/claude-code-cloud-operator/actions/runs/37611163966/job/112758476250",
+    "conclusion": "success",
+    "completedAt": "2026-10-07T11:03:06Z",
+    "rawLogSHA256": "b9739c0708777ecdc9641e15b6f7ef342f7742741ac62a031c3fadbf6b8c110d",
+    "jobMetadataSHA256": "830ee6591d5e9eb5d75346059d9c58e5d60198797ee820b3faae3448a2d30891",
+    "sourceFilesMatchEvidence": true,
+    "imagePublished": false,
+    "containerRescanPerformed": false
+  }
+}

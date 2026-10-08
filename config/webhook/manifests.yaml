@@ -1,0 +1,52 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: cloud-operator-admission
+  annotations:
+    cert-manager.io/inject-ca-from: cloud-operator-system/cloud-operator-serving-cert
+webhooks:
+- name: receipts.runners.biwsantang.github.io
+  admissionReviewVersions: [v1]
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  timeoutSeconds: 5
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: cloud-operator-system
+  clientConfig:
+    service:
+      name: cloud-operator-webhook
+      namespace: cloud-operator-system
+      path: /validate
+      port: 443
+  rules:
+  - operations: [CREATE, UPDATE, DELETE]
+    apiGroups: [runners.biwsantang.github.io]
+    apiVersions: [v1alpha1]
+    resources: [clauderunnerfleets, clauderunnerfleets/status, claudeworkorders, claudeworkorders/status]
+    scope: Namespaced
+- name: credentials.runners.biwsantang.github.io
+  matchConditions:
+  - name: hook-service-accounts
+    expression: "request.userInfo.username.startsWith('system:serviceaccount:cloud-operator-system:') && request.userInfo.username.endsWith('-hook')"
+  admissionReviewVersions: [v1]
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  timeoutSeconds: 5
+  namespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: cloud-operator-system
+  clientConfig:
+    service:
+      name: cloud-operator-webhook
+      namespace: cloud-operator-system
+      path: /validate
+      port: 443
+  rules:
+  - operations: [CREATE, UPDATE, DELETE]
+    apiGroups: [""]
+    apiVersions: [v1]
+    resources: [secrets]
+    scope: Namespaced
