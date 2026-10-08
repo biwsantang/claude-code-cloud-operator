@@ -45,7 +45,7 @@ Choose a published version from [GitHub Releases](https://github.com/biwsantang/
 The RC version below is illustrative until that release exists. Helm's chart version omits the Git tag's `v`.
 
 ```sh
-VERSION=0.1.0-rc.1
+VERSION=0.1.0-rc.2
 kubectl apply -f "https://raw.githubusercontent.com/biwsantang/claude-code-cloud-operator/v${VERSION}/examples/argocd/namespace.yaml"
 helm install cloud-operator oci://ghcr.io/biwsantang/charts/claude-code-cloud-operator \
   --version "$VERSION" --namespace cloud-operator-system --wait --timeout 5m

@@ -213,6 +213,8 @@ jobs:
           image=$(jq -r .image "release/$component.json")
           for architecture in amd64 arm64; do
             docker pull --platform "linux/$architecture" "$image"
+            # The runner's classic image store holds one platform per index digest.
+            docker image rm "$image"
           done
         done
       env:

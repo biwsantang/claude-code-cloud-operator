@@ -13,7 +13,7 @@ spec:
   source:
     repoURL: ghcr.io/biwsantang/charts
     chart: claude-code-cloud-operator
-    targetRevision: 0.1.0-rc.1
+    targetRevision: 0.1.0-rc.2
     helm:
       releaseName: cloud-operator
   destination:
