@@ -18,6 +18,7 @@ spec:
   # Replace all three example digests with verified images before activation.
   orchestratorImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   hookImage: example.invalid/hook@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  orchestratorReplicas: 2
   execution:
     runnerImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     securityRevision: replace-after-network-acceptance
@@ -34,3 +35,9 @@ spec:
       limits:
         memory: 4Gi
     workspaceSize: 8Gi
+    lifecycle:
+      idleMinutes: 30
+      maxSessionMinutes: 480
+      shutdownWaitSeconds: 300
+      promptToSave: true
+      pushOutcomeOnRelease: false

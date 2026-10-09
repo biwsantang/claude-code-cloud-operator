@@ -163,8 +163,11 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: w.Namespace, Name: w.Spec.FleetName}, f); err != nil {
 			return readFailure(err, "Fleet unavailable")
 		}
-		if string(f.UID) != w.Spec.FleetUID || !contract.Owns(f, w, "ClaudeRunnerFleet") || w.Spec.PoolID != f.Spec.EnvironmentID || !reflect.DeepEqual(w.Spec.Execution, f.Spec.Execution) {
+		if string(f.UID) != w.Spec.FleetUID || !contract.Owns(f, w, "ClaudeRunnerFleet") || w.Spec.PoolID != f.Spec.EnvironmentID || !contract.ExecutionMatchesFleet(w.Spec.Execution, f.Spec.Execution) {
 			return deny("Fleet identity or policy mismatch")
+		}
+		if req.Operation == admissionv1.Create && !reflect.DeepEqual(w.Spec.Execution, contract.AcceptedExecution(f)) {
+			return deny("New receipts must freeze resolved lifecycle and the Fleet hook image")
 		}
 		if err := contract.InputsReady(ctx, h.Reader, f, h.now()); err != nil {
 			return prerequisiteFailure(err, "Fleet intake prerequisites are missing")

@@ -29,6 +29,28 @@ type ProxyPolicy struct {
 	Port int32 `json:"port"`
 }
 
+// SessionLifecycle controls native session retention, independently of credential expiry.
+// Omitted fields resolve once at new-order intake; never default stored receipts.
+// +kubebuilder:validation:XValidation:rule="!has(self.idleMinutes) || !has(self.maxSessionMinutes) || self.idleMinutes == 0 || self.maxSessionMinutes == 0 || self.idleMinutes <= self.maxSessionMinutes",message="Positive idleMinutes cannot exceed maxSessionMinutes"
+type SessionLifecycle struct {
+	// IdleMinutes releases idle sessions using the native runner. New-order default: 30; 0 disables.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=10080
+	IdleMinutes *int32 `json:"idleMinutes,omitempty"`
+	// MaxSessionMinutes starts native release at the age threshold, followed by native grace. Default: 480; 0 disables.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=10080
+	MaxSessionMinutes *int32 `json:"maxSessionMinutes,omitempty"`
+	// ShutdownWaitSeconds lets an in-flight turn finish after SIGTERM. New-order default: 300; 0 skips the wait.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=86400
+	ShutdownWaitSeconds *int32 `json:"shutdownWaitSeconds,omitempty"`
+	// PromptToSave installs a once-per-turn reminder, never an unconditional git commit/push. New-order default: true.
+	PromptToSave *bool `json:"promptToSave,omitempty"`
+	// PushOutcomeOnRelease opts into native best-effort push of committed outcome refs. Restrict claude/* push access first. Default: false.
+	PushOutcomeOnRelease *bool `json:"pushOutcomeOnRelease,omitempty"`
+}
+
 // ExecutionPolicy is deliberately narrower than PodSpec. All accepted inputs are frozen in a receipt.
 type ExecutionPolicy struct {
 	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$`
@@ -54,6 +76,12 @@ type ExecutionPolicy struct {
 	// +kubebuilder:validation:Minimum=300
 	// +kubebuilder:validation:Maximum=604800
 	DiagnosticRetentionSeconds int64 `json:"diagnosticRetentionSeconds"`
+	// Lifecycle is resolved and frozen only for newly accepted orders. Missing on a legacy receipt preserves legacy behavior.
+	Lifecycle *SessionLifecycle `json:"lifecycle,omitempty"`
+	// SessionConfigImage is stamped from the Fleet hook image at intake; do not set it on Fleets.
+	// It pins the materializer/save helper for the accepted order, independently of later hook upgrades.
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$`
+	SessionConfigImage string `json:"sessionConfigImage,omitempty"`
 }
 
 type ClaudeRunnerFleetSpec struct {

@@ -1,12 +1,243 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "managerImage": {
       "type": "string",
-      "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$",
-      "description": "A verified manager image digest"
+      "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+    },
+    "fleet": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "maxLength": 40
+        },
+        "suspended": {
+          "type": "boolean"
+        },
+        "environmentID": {
+          "type": "string"
+        },
+        "environmentSecretRef": {
+          "type": "string"
+        },
+        "networkReportRef": {
+          "type": "string"
+        },
+        "runtimeImage": {
+          "type": "string"
+        },
+        "hookImage": {
+          "type": "string"
+        },
+        "securityRevision": {
+          "type": "string"
+        },
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "namespace": {
+              "type": "string"
+            },
+            "podLabels": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        },
+        "hostConfigRef": {
+          "type": "string",
+          "pattern": "^$|^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+          "maxLength": 253
+        },
+        "orchestratorReplicas": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "workspaceSize": {
+          "type": "string",
+          "pattern": "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti)?$"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requests": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "cpu": {
+                  "type": "string",
+                  "pattern": "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti)?$"
+                },
+                "memory": {
+                  "type": "string",
+                  "pattern": "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti)?$"
+                }
+              },
+              "required": [
+                "cpu",
+                "memory"
+              ]
+            },
+            "limits": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "memory": {
+                  "type": "string",
+                  "pattern": "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti)?$"
+                }
+              },
+              "required": [
+                "memory"
+              ]
+            }
+          },
+          "required": [
+            "requests",
+            "limits"
+          ]
+        },
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "idleMinutes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            "maxSessionMinutes": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10080
+            },
+            "shutdownWaitSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 86400
+            },
+            "promptToSave": {
+              "type": "boolean"
+            },
+            "pushOutcomeOnRelease": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "idleMinutes",
+            "maxSessionMinutes",
+            "shutdownWaitSeconds",
+            "promptToSave",
+            "pushOutcomeOnRelease"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "name",
+        "suspended",
+        "session"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "environmentID",
+              "environmentSecretRef",
+              "networkReportRef",
+              "runtimeImage",
+              "hookImage",
+              "securityRevision",
+              "proxy",
+              "orchestratorReplicas",
+              "workspaceSize",
+              "resources"
+            ],
+            "properties": {
+              "environmentID": {
+                "type": "string",
+                "pattern": "^ccpool_[A-Za-z0-9_-]+$",
+                "minLength": 8
+              },
+              "environmentSecretRef": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                "maxLength": 253
+              },
+              "networkReportRef": {
+                "type": "string",
+                "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+                "maxLength": 253
+              },
+              "runtimeImage": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+              },
+              "hookImage": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+              },
+              "securityRevision": {
+                "type": "string",
+                "minLength": 1
+              },
+              "proxy": {
+                "required": [
+                  "url",
+                  "namespace",
+                  "podLabels",
+                  "port"
+                ],
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "pattern": "^http://[a-z0-9.-]+:[0-9]+$"
+                  },
+                  "namespace": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+                  },
+                  "podLabels": {
+                    "minProperties": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   },
-  "required": ["managerImage"]
+  "required": [
+    "managerImage",
+    "fleet"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#"
 }

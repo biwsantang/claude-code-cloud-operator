@@ -32,8 +32,10 @@ records the hook digest for Fleet configuration. All images include Linux AMD64/
   allowlist. Reproduce network conformance in your cluster; the presence of NetworkPolicy is insufficient.
 - A trusted digest-pinned runtime exposing `/usr/local/bin/claude` with compatible native self-hosted
   orchestrator/session commands. It must run as UID/GID 1000 with a read-only root filesystem and use
-  the writable volumes provided by the operator. Optional host configuration additionally needs `/bin/sh`
-  and `cp`. Development tools are your runtime's responsibility; see the [runtime candidate](../../images/runtime/README.md).
+  the writable volumes provided by the operator. Save reminders require Git and command-hook `/bin/sh`;
+  legacy receipts with host configuration still require `cp`. New session configuration uses the operator's
+  static helper, without a runtime jq/Python dependency. Development tools are your runtime's responsibility;
+  see the [runtime candidate](../../images/runtime/README.md).
 
 Public manager/hook images need no pull Secret. Private runtime images need a verified node credential
 provider; this initial API does not expose Pod pull-secret references. Fetch credentials used by nodes
@@ -42,7 +44,7 @@ must not become cloud identity inside a session container.
 ## Helm
 
 Choose a published version from [GitHub Releases](https://github.com/biwsantang/claude-code-cloud-operator/releases).
-The RC version below is illustrative until that release exists. Helm's chart version omits the Git tag's `v`.
+The published RC version below installs the operator. Helm's chart version omits the Git tag's `v`.
 
 ```sh
 VERSION=0.1.0-rc.2
@@ -68,6 +70,8 @@ installation resource kinds. For Argo's Helm source, `repoURL` has no `oci://` p
 The example uses manual sync and server-side apply, omits cascading deletion, and protects the child
 Application. CRDs carry `Prune=false,Delete=false`; the namespace and example Fleet have the same
 protection. Keep Fleet configuration in a separate Git application targeting the installation namespace.
+The source follow-up adds an opt-in chart Fleet using the [two-step Helm or Argo wave setup](session-lifecycle.md);
+that feature is not in the published `v0.1.0-rc.2` chart.
 Only declare administrator-owned inputs and Fleets there. The operator owns its generated Pods,
 work orders, credential Secrets and network resources.
 [Argo CD Helm](https://argo-cd.readthedocs.io/en/stable/user-guide/helm/),

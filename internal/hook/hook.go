@@ -157,7 +157,8 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 		if f.Spec.Suspended || !f.DeletionTimestamp.IsZero() {
 			return fail("FleetSuspended", Retryable)
 		}
-		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), ClockOffsetSeconds: offset, CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(f.Spec.Execution), Execution: *f.Spec.Execution.DeepCopy()}}
+		execution := contract.AcceptedExecution(f)
+		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), ClockOffsetSeconds: offset, CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(execution), Execution: execution}}
 		if err := contract.ValidateOrder(w); err != nil {
 			return fail("InvalidReceipt", Permanent)
 		}

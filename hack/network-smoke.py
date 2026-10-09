@@ -58,8 +58,14 @@ def main():
     proxy = f['spec']['execution']['proxy']
     if proxy != {'url':'http://proxy.proxy.svc:3128','namespace':'proxy','podLabels':{'app':'proxy'},'port':3128}:
         raise SystemExit('Fleet does not select the synthetic proxy fixture')
+    policies = json.loads(run('get','networkpolicy','-n',a.namespace,'-o','json'))['items']
+    owned = [policy for policy in policies if any(owner.get('uid') == f['metadata']['uid'] for owner in policy['metadata'].get('ownerReferences', []))]
+    # Lifecycle changes are frozen in receipt digests but do not change network selectors.
+    selected = [policy for policy in owned if policy['spec']['podSelector'].get('matchLabels', {}).get('runners.biwsantang.github.io/role') == 'session'
+                and policy['metadata'].get('annotations', {}).get('runners.biwsantang.github.io/declared-policy-digest') == f['status']['policyDigest']]
+    if len(selected) != 1: raise SystemExit('Expected one current Fleet session network policy')
+    network_labels = selected[0]['spec']['podSelector']['matchLabels']
     revision = f['status']['policyDigest']
-    run('get', 'networkpolicy', a.fleet+'-'+revision[:12], '-n', a.namespace)
     apply({'apiVersion':'v1','kind':'Namespace','metadata':{'name':'proxy'}})
     labels = {'operator-test':'network-smoke'}
     apply({'apiVersion':'v1','kind':'ConfigMap','metadata':{'name':'network-proxy','namespace':'proxy','labels':labels},'data':{'proxy.py':PROXY}})
@@ -93,7 +99,7 @@ for attempt in range(2):
 '''.replace('PROBES',repr(probes))
     results={}
     for name, selected in [('network-control',False),('network-fresh-1',True),('network-fresh-2',True)]:
-        selected_labels = {'runners.biwsantang.github.io/fleet':a.fleet,'runners.biwsantang.github.io/revision':revision[:32],'runners.biwsantang.github.io/role':'session'} if selected else {}
+        selected_labels = network_labels if selected else {}
         apply(pod(name,a.namespace,selected_labels,['python3','-c',script]))
         for _ in range(120):
             phase=json.loads(run('get','pod',name,'-n',a.namespace,'-o','json'))['status']['phase']

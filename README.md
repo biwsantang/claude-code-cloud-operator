@@ -58,8 +58,10 @@ Choose a published version from [Releases](https://github.com/biwsantang/claude-
 The chart supplies the released manager digest; public manager/hook images need no registry login.
 Follow the [public installation guide](wiki/operations/public-installation.md) for prerequisites,
 Helm commands, [Argo CD examples](examples/argocd/application.yaml), Fleet setup and upgrades.
+The [curated Fleet and lifecycle controls](wiki/operations/session-lifecycle.md) are a source follow-up;
+they are not included in the already published `v0.1.0-rc.2` artifacts.
 
-For a local source build before a release exists:
+For a local source build:
 
 Use a dedicated trust namespace and an existing cert-manager installation. Build and verify an image,
 then supply its digest. There is one operator installation per cluster in this initial version.

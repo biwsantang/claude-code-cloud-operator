@@ -18,6 +18,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,9 +27,11 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -144,6 +147,80 @@ func TestAPIRecovery(t *testing.T) {
 		}
 		return w
 	}
+	t.Run("lifecycle-intake-freeze-and-schema-compatibility", func(t *testing.T) {
+		f, hc, token := fixture(t, "lifecycle")
+		if f.Spec.Execution.Lifecycle != nil {
+			t.Fatal("Fleet retroactively defaulted")
+		}
+		w := intake(t, f, hc, token, "lifecycle-order")
+		if w.Spec.Execution.Lifecycle == nil || *w.Spec.Execution.Lifecycle.IdleMinutes != 30 || w.Spec.Execution.SessionConfigImage != f.Spec.HookImage {
+			t.Fatal("intake defaults not frozen")
+		}
+		for _, variant := range []string{"legacy-new-create", "foreign-helper"} {
+			forged := w.DeepCopy()
+			forged.Spec.OrderID = variant
+			forged.Name = contract.Name(forged.Spec.PoolID, variant)
+			forged.ResourceVersion, forged.UID = "", ""
+			forged.Spec.CredentialSecretRef.Name = forged.Name + "-credential"
+			forged.Spec.Complete = false
+			forged.Status = api.ClaudeWorkOrderStatus{}
+			if variant == "legacy-new-create" {
+				forged.Spec.Execution = *f.Spec.Execution.DeepCopy()
+			} else {
+				forged.Spec.Execution.SessionConfigImage = "example.invalid/foreign@sha256:" + strings.Repeat("b", 64)
+			}
+			forged.Spec.PolicyDigest = contract.PolicyDigest(forged.Spec.Execution)
+			if err := hc.Create(ctx, forged); err == nil || !strings.Contains(err.Error(), "freeze resolved lifecycle") {
+				t.Fatal("new receipt bypassed defaults/helper provenance", err)
+			}
+		}
+		changed := w.DeepCopy()
+		changed.Spec.Execution.Lifecycle.IdleMinutes = ptr.To(int32(15))
+		changed.Spec.PolicyDigest = contract.PolicyDigest(changed.Spec.Execution)
+		if hc.Update(ctx, changed) == nil {
+			t.Fatal("accepted lifecycle mutated")
+		}
+		bad := f.DeepCopy()
+		bad.Spec.Suspended = true
+		bad.Spec.Execution.Lifecycle = &api.SessionLifecycle{MaxSessionMinutes: ptr.To(int32(29))}
+		if admin.Update(ctx, bad) == nil {
+			t.Fatal("partial lifecycle bypassed resolved validation")
+		}
+		// Outside the installation admission scope, the API server independently exercises
+		// the upgraded schema on a stored legacy receipt: no default insertion on read/update.
+		legacyNS := "legacy-schema-fixture"
+		must(t, admin.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: legacyNS}}))
+		legacy := w.DeepCopy()
+		legacy.Namespace = legacyNS
+		legacy.ResourceVersion = ""
+		legacy.UID = ""
+		legacy.OwnerReferences = nil
+		legacy.Finalizers = nil
+		legacy.Status = api.ClaudeWorkOrderStatus{}
+		legacy.Spec.Execution = *f.Spec.Execution.DeepCopy()
+		legacy.Spec.PolicyDigest = contract.PolicyDigest(legacy.Spec.Execution)
+		must(t, admin.Create(ctx, legacy))
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(legacy), legacy))
+		if legacy.Spec.Execution.Lifecycle != nil || legacy.Spec.Execution.SessionConfigImage != "" || legacy.Spec.PolicyDigest != contract.PolicyDigest(legacy.Spec.Execution) {
+			t.Fatal("stored legacy receipt changed")
+		}
+		legacy.Annotations = map[string]string{"fixture": "roundtrip"}
+		must(t, admin.Update(ctx, legacy))
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(legacy), legacy))
+		if legacy.Spec.Execution.Lifecycle != nil {
+			t.Fatal("legacy update inserted lifecycle")
+		}
+		invalid := legacy.DeepCopy()
+		invalid.Spec.Execution.Lifecycle = &api.SessionLifecycle{IdleMinutes: ptr.To(int32(31)), MaxSessionMinutes: ptr.To(int32(30))}
+		if admin.Update(ctx, invalid) == nil {
+			t.Fatal("schema CEL accepted invalid minutes")
+		}
+		invalid = legacy.DeepCopy()
+		invalid.Spec.Execution.Lifecycle = &api.SessionLifecycle{ShutdownWaitSeconds: ptr.To(int32(86401))}
+		if admin.Update(ctx, invalid) == nil {
+			t.Fatal("schema accepted shutdown outside bounds")
+		}
+	})
 	t.Run("schema-default-and-activation-guards", func(t *testing.T) {
 		f, hc, _ := fixture(t, "guards")
 		_ = hc
@@ -322,6 +399,24 @@ func TestAPIRecovery(t *testing.T) {
 		must(t, manager.Get(ctx, key, d))
 		if d.ResourceVersion != revision {
 			t.Fatal("unchanged reconcile rewrote Deployment")
+		}
+		network := &networkingv1.NetworkPolicy{}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(builders.Network(f)), network))
+		selector := network.Spec.PodSelector.DeepCopy()
+		network.Annotations = map[string]string{"fixture": "preserve"}
+		must(t, admin.Update(ctx, network))
+		_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(network), network))
+		if network.Annotations[contract.Group+"/declared-policy-digest"] != contract.PolicyDigest(f.Spec.Execution) || network.Annotations["fixture"] != "preserve" || !reflect.DeepEqual(selector, &network.Spec.PodSelector) {
+			t.Fatal("network annotation migration changed isolation or unrelated metadata")
+		}
+		networkVersion := network.ResourceVersion
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(network), network))
+		if network.ResourceVersion != networkVersion {
+			t.Fatal("stable network annotation rewritten")
 		}
 	})
 	t.Run("network-approval-policy-revocation-and-optional-expiry", func(t *testing.T) {

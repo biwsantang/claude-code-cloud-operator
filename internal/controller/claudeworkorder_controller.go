@@ -109,7 +109,7 @@ func (r *ClaudeWorkOrderReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := contract.InputsReady(ctx, r.Client, f, now); err != nil {
 		return r.save(ctx, w, "Accepted", "PrerequisitesUnavailable", false)
 	}
-	if w.Spec.PolicyDigest != contract.PolicyDigest(f.Spec.Execution) {
+	if !contract.ExecutionMatchesFleet(w.Spec.Execution, f.Spec.Execution) {
 		return r.save(ctx, w, "Expired", "PolicyChangedBeforeLaunch", true)
 	}
 	secret := &corev1.Secret{}

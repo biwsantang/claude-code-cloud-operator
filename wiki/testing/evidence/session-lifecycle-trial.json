@@ -1,0 +1,136 @@
+{
+  "recordedAt": "2026-10-09",
+  "scope": "Local source follow-up on dedicated kind cluster; not a published release or downstream acceptance",
+  "baseCommit": "02b4ab1df7a36df86aba525b441710ba4a806371",
+  "versions": {
+    "kubernetes": "1.37.0",
+    "cilium": "1.20.2",
+    "certManager": "1.21.2",
+    "helm": "4.2.3",
+    "nativeClaude": "2.1.285",
+    "architecture": "arm64"
+  },
+  "localImageDigests": {
+    "manager": "sha256:eadc27357b2f8937c5c099f7162ba0fb08ca367e7d6e4612715ac70b46e11bfe",
+    "helper": "sha256:4e9a5dc31730859eecf30d3aa7bc12c327ec13126d3852fa7ea2e697167b3a2d",
+    "runtime": "sha256:c2f8f9f72e0f2d43c999952168c00e4c844e2ce7ed26a8f51c555659383d4811"
+  },
+  "acceleratedLifecycle": {
+    "idleMinutes": 1,
+    "maxSessionMinutes": 10,
+    "shutdownWaitSeconds": 30,
+    "promptToSave": true,
+    "pushOutcomeOnRelease": false,
+    "podGraceSeconds": 150,
+    "nativeShutdownBudgetSeconds": 110
+  },
+  "verification": {
+    "makeVerify": "pass",
+    "makeTestAPI": "pass, Kubernetes 1.33.0, race detector, separate Docker UID after shared root inotify exhaustion",
+    "curatedHelmRendering": "pass",
+    "networkFreshPods": 2,
+    "directProbeDenials": [
+      "public",
+      "private",
+      "kubernetes",
+      "metadata",
+      "pod-identity"
+    ],
+    "proxyHTTPSWithCA": "pass",
+    "proxyPrivateAndIPConnect": "denied",
+    "ciliumPolicyDeniedFlows": "observed",
+    "optionalFleetFreshArgoTrial": "not run"
+  },
+  "sameWorkspace": {
+    "observed": true,
+    "podUIDHashes": [
+      "401bc27d8030afd8ec0bbda94e692c050fdf54445d10092bc32de8c068884d4a",
+      "7f9b1192013ab9561ed7bfac4ee45765e2e2678879ac17de3113f09c854dfc36"
+    ]
+  },
+  "reminder": {
+    "testOnlyCaptureInstrumentation": true,
+    "nativeStopProbes": [
+      {
+        "phase": "shutdown",
+        "stopHookActive": false,
+        "helperProbeExit": 0,
+        "helperProbeDecision": "block"
+      },
+      {
+        "phase": "other",
+        "stopHookActive": true,
+        "helperProbeExit": 0,
+        "helperProbeDecision": null
+      }
+    ],
+    "userRefusalRespected": true,
+    "scratchLeftUncommitted": true
+  },
+  "signal": {
+    "orderNameHash": "6337fafc6e2b390fdaaca75639afb6b02d804833c887e93aff485e2d9716b27a",
+    "podUIDHash": "7f9b1192013ab9561ed7bfac4ee45765e2e2678879ac17de3113f09c854dfc36",
+    "inFlightBeforeSignal": true,
+    "graceSeconds": 150,
+    "suspendPreservedActivePod": true,
+    "finishedMarkerObserved": true,
+    "shutdownReplyObserved": true,
+    "nativeWaitObserved": true,
+    "stopElapsedSeconds": 35.26,
+    "receiptPhase": "Succeeded",
+    "receiptReason": "PodExitedZero",
+    "launchFencePreserved": true,
+    "oldPodAbsent": true
+  },
+  "freshResume": {
+    "orderNameHash": "f363fb0254d8f0f92ca0a54ed8b10dd0e9c2114c05b5b59e30d26a97d719511b",
+    "podUIDHash": "174d2a5355aecb589c86a547cf8a267851273c78285b03c189775d06f0d9ba20",
+    "replyObserved": true,
+    "managerImage": "claude-lifecycle-manager@sha256:eadc27357b2f8937c5c099f7162ba0fb08ca367e7d6e4612715ac70b46e11bfe",
+    "helperImage": "claude-lifecycle-hook@sha256:4e9a5dc31730859eecf30d3aa7bc12c327ec13126d3852fa7ea2e697167b3a2d"
+  },
+  "idleRelease": {
+    "elapsedAfterReplySeconds": 84.37,
+    "podAbsent": true,
+    "phase": "Succeeded",
+    "reason": "PodExitedZero",
+    "launchFence": true
+  },
+  "nativeIdleClockArmedAndReleaseLogged": true,
+  "drain": {
+    "podAbsent": true,
+    "phase": "Succeeded",
+    "reason": "InfrastructureExitedDuringDrain",
+    "launchFence": true
+  },
+  "drainReplyObserved": true,
+  "drainKeptActivePods": true,
+  "releasePush": {
+    "tested": false,
+    "defaultEnabled": false,
+    "prerequisite": "No proved actor restriction on claude/*; repository naming/signature rules conflict with native outcome refs; no push attempted or rules changed"
+  },
+  "limits": [
+    "Initial default-resource queued-session startup failures excluded from success",
+    "No full eight-hour age or native hard-cap grace trial",
+    "No production concurrency/startup latency claim",
+    "Optional runtime vulnerability and redistribution qualification remains separate",
+    "Forced deletion, repeated signals and node loss cannot guarantee saving"
+  ],
+  "abort": {
+    "elapsedSeconds": 34.1,
+    "podAbsent": true,
+    "phase": "Succeeded",
+    "reason": "InfrastructureExitedDuringDrain",
+    "launchFence": true
+  },
+  "abortInFlightBeforeRequest": true,
+  "abortDeletingObserved": true,
+  "abortReplyObserved": false,
+  "retainedFleetPresent": true,
+  "abortAdmission": {
+    "initialActiveDrainPatch": "denied because intake paused",
+    "suspendedAbortPatch": "accepted"
+  },
+  "receiptPhaseMeaning": "During Fleet drain/Abort, Succeeded with InfrastructureExitedDuringDrain records infrastructure cleanup, not successful user work. Captured native reply exists for Drain, absent for interrupted Abort."
+}

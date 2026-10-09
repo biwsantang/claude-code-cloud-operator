@@ -28,8 +28,38 @@ func ProxyEnv(p api.ProxyPolicy) []corev1.EnvVar {
 }
 func Runner(w *api.ClaudeWorkOrder) *corev1.Pod {
 	p := w.Spec.Execution
-	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: w.Name, Namespace: w.Namespace, Labels: Labels(w.Spec.FleetName, w.Spec.PolicyDigest, "session"), OwnerReferences: []metav1.OwnerReference{contract.Owner(w, "ClaudeWorkOrder")}}, Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyNever, AutomountServiceAccountToken: ptr.To(false), ServiceAccountName: w.Spec.FleetName + "-session", EnableServiceLinks: ptr.To(false), TerminationGracePeriodSeconds: ptr.To(int64(120)), SecurityContext: &corev1.PodSecurityContext{FSGroup: ptr.To(int64(1000)), RunAsNonRoot: ptr.To(true), SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}}, NodeSelector: p.NodeSelector, Tolerations: p.Tolerations, Volumes: []corev1.Volume{Ephemeral("workspace", p.WorkspaceSize), Ephemeral("home", "1Gi"), Ephemeral("tmp", "1Gi"), {Name: "credential", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: w.Spec.CredentialSecretRef.Name, DefaultMode: ptr.To(int32(0440)), Items: []corev1.KeyToPath{{Key: contract.CredentialKey, Path: "work-order.jwt"}}}}}}, Containers: []corev1.Container{{Name: "runner", Image: p.RunnerImage, Command: []string{"/usr/local/bin/claude"}, Args: []string{"self-hosted-runner", "--environment-secret-file", "/credential/work-order.jwt", "--base-dir", "/workspace", "--capacity", "1", "--drain-grace-sec", "0", "--confine-repo-settings", "enforce", "--use-anthropic-git-proxy", "--configure-git"}, SecurityContext: Security(), Resources: p.Resources, Env: ProxyEnv(p.Proxy), VolumeMounts: []corev1.VolumeMount{{Name: "credential", MountPath: "/credential", ReadOnly: true}, {Name: "workspace", MountPath: "/workspace"}, {Name: "home", MountPath: "/home/runner"}, {Name: "tmp", MountPath: "/tmp"}}}}}}
-	if p.HostConfigRef != nil {
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: w.Name, Namespace: w.Namespace, Labels: Labels(w.Spec.FleetName, contract.NetworkDigest(p), "session"), OwnerReferences: []metav1.OwnerReference{contract.Owner(w, "ClaudeWorkOrder")}}, Spec: corev1.PodSpec{RestartPolicy: corev1.RestartPolicyNever, AutomountServiceAccountToken: ptr.To(false), ServiceAccountName: w.Spec.FleetName + "-session", EnableServiceLinks: ptr.To(false), TerminationGracePeriodSeconds: ptr.To(int64(120)), SecurityContext: &corev1.PodSecurityContext{FSGroup: ptr.To(int64(1000)), RunAsNonRoot: ptr.To(true), SeccompProfile: &corev1.SeccompProfile{Type: corev1.SeccompProfileTypeRuntimeDefault}}, NodeSelector: p.NodeSelector, Tolerations: p.Tolerations, Volumes: []corev1.Volume{Ephemeral("workspace", p.WorkspaceSize), Ephemeral("home", "1Gi"), Ephemeral("tmp", "1Gi"), {Name: "credential", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: w.Spec.CredentialSecretRef.Name, DefaultMode: ptr.To(int32(0440)), Items: []corev1.KeyToPath{{Key: contract.CredentialKey, Path: "work-order.jwt"}}}}}}, Containers: []corev1.Container{{Name: "runner", Image: p.RunnerImage, Command: []string{"/usr/local/bin/claude"}, Args: []string{"self-hosted-runner", "--environment-secret-file", "/credential/work-order.jwt", "--base-dir", "/workspace", "--capacity", "1", "--drain-grace-sec", "0", "--confine-repo-settings", "enforce", "--use-anthropic-git-proxy", "--configure-git"}, SecurityContext: Security(), Resources: p.Resources, Env: ProxyEnv(p.Proxy), VolumeMounts: []corev1.VolumeMount{{Name: "credential", MountPath: "/credential", ReadOnly: true}, {Name: "workspace", MountPath: "/workspace"}, {Name: "home", MountPath: "/home/runner"}, {Name: "tmp", MountPath: "/tmp"}}}}}}
+	if p.Lifecycle != nil {
+		life := contract.ResolvedLifecycle(p.Lifecycle)
+		pod.Spec.TerminationGracePeriodSeconds = ptr.To(int64(*life.ShutdownWaitSeconds) + 120)
+		pod.Spec.Containers[0].Args = append(pod.Spec.Containers[0].Args,
+			"--release-idle-session-min", fmt.Sprint(*life.IdleMinutes),
+			"--kill-session-after-min", fmt.Sprint(*life.MaxSessionMinutes),
+			"--drain-wait-sec", fmt.Sprint(*life.ShutdownWaitSeconds),
+			"--session-stop-grace-sec", "5", "--post-session-hook-timeout-sec", "60")
+		if *life.PushOutcomeOnRelease {
+			// Native 2.1.285 can add 20s when release was already in flight.
+			// 80s fixed + 30s push + 20s release + 10s headroom = 140s.
+			pod.Spec.TerminationGracePeriodSeconds = ptr.To(int64(*life.ShutdownWaitSeconds) + 140)
+			pod.Spec.Containers[0].Args = append(pod.Spec.Containers[0].Args, "--push-outcome-on-release")
+		}
+		// Materialize image config even with the reminder disabled: the session's
+		// empty HOME must not hide image-provided hooks, permissions or MCP definitions.
+		{
+			pod.Spec.Volumes = append(pod.Spec.Volumes, Ephemeral("session-tools", "64Mi"), Ephemeral("host-config", "64Mi"))
+			resources := corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("100m"), corev1.ResourceMemory: resource.MustParse("128Mi")}, Limits: corev1.ResourceList{corev1.ResourceMemory: resource.MustParse("256Mi")}}
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, corev1.Container{Name: "install-session-tools", Image: p.SessionConfigImage, Command: []string{"/spawn-runner", "install", "/session-tools"}, SecurityContext: Security(), Resources: resources, VolumeMounts: []corev1.VolumeMount{{Name: "session-tools", MountPath: "/session-tools"}}})
+			prepare := corev1.Container{Name: "prepare-host-config", Image: p.RunnerImage, Command: []string{"/session-tools/spawn-runner", "prepare-session-config", "/host-config", fmt.Sprint(*life.PromptToSave)}, SecurityContext: Security(), Resources: resources, VolumeMounts: []corev1.VolumeMount{{Name: "session-tools", MountPath: "/session-tools", ReadOnly: true}, {Name: "host-config", MountPath: "/host-config"}}}
+			if p.HostConfigRef != nil {
+				pod.Spec.Volumes = append(pod.Spec.Volumes, corev1.Volume{Name: "host-config-source", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: p.HostConfigRef.Name}}}})
+				prepare.Command = append(prepare.Command, "/host-config-source")
+				prepare.VolumeMounts = append(prepare.VolumeMounts, corev1.VolumeMount{Name: "host-config-source", MountPath: "/host-config-source", ReadOnly: true})
+			}
+			pod.Spec.InitContainers = append(pod.Spec.InitContainers, prepare)
+			pod.Spec.Containers[0].VolumeMounts = append(pod.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{Name: "host-config", MountPath: "/etc/claude", ReadOnly: true})
+			pod.Spec.Containers[0].Env = append(pod.Spec.Containers[0].Env, corev1.EnvVar{Name: "SELF_HOSTED_RUNNER_HOST_CONFIG_DIR", Value: "/etc/claude"})
+		}
+	} else if p.HostConfigRef != nil {
 		// Native config snapshots omit symlinks. Materialize projected ConfigMap files before startup.
 		pod.Spec.Volumes = append(pod.Spec.Volumes, Ephemeral("host-config", "32Mi"), corev1.Volume{Name: "host-config-source", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: p.HostConfigRef.Name}}}})
 		pod.Spec.InitContainers = append(pod.Spec.InitContainers, corev1.Container{
@@ -45,9 +75,9 @@ func Runner(w *api.ClaudeWorkOrder) *corev1.Pod {
 	return pod
 }
 func Network(f *api.ClaudeRunnerFleet) *networkingv1.NetworkPolicy {
-	revision := contract.PolicyDigest(f.Spec.Execution)
+	revision := contract.NetworkDigest(f.Spec.Execution)
 	p := f.Spec.Execution.Proxy
-	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: f.Name + "-" + revision[:12], Namespace: f.Namespace, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: networkingv1.NetworkPolicySpec{PodSelector: metav1.LabelSelector{MatchLabels: Labels(f.Name, revision, "session")}, PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}, Ingress: []networkingv1.NetworkPolicyIngressRule{}, Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": p.Namespace}}, PodSelector: &metav1.LabelSelector{MatchLabels: p.PodLabels}}}, Ports: []networkingv1.NetworkPolicyPort{{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(p.Port))}}}, {To: []networkingv1.NetworkPolicyPeer{{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}}, PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}}}}, Ports: []networkingv1.NetworkPolicyPort{{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(53))}, {Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(53))}}}}}}
+	return &networkingv1.NetworkPolicy{ObjectMeta: metav1.ObjectMeta{Name: f.Name + "-" + revision[:12], Namespace: f.Namespace, Annotations: map[string]string{contract.Group + "/declared-policy-digest": contract.PolicyDigest(f.Spec.Execution)}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: networkingv1.NetworkPolicySpec{PodSelector: metav1.LabelSelector{MatchLabels: Labels(f.Name, revision, "session")}, PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}, Ingress: []networkingv1.NetworkPolicyIngressRule{}, Egress: []networkingv1.NetworkPolicyEgressRule{{To: []networkingv1.NetworkPolicyPeer{{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": p.Namespace}}, PodSelector: &metav1.LabelSelector{MatchLabels: p.PodLabels}}}, Ports: []networkingv1.NetworkPolicyPort{{Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(p.Port))}}}, {To: []networkingv1.NetworkPolicyPeer{{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"kubernetes.io/metadata.name": "kube-system"}}, PodSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"k8s-app": "kube-dns"}}}}, Ports: []networkingv1.NetworkPolicyPort{{Protocol: ptr.To(corev1.ProtocolUDP), Port: ptr.To(intstr.FromInt32(53))}, {Protocol: ptr.To(corev1.ProtocolTCP), Port: ptr.To(intstr.FromInt32(53))}}}}}}
 }
 func Orchestrator(f *api.ClaudeRunnerFleet, credentialRevision string, enabled bool) *appsv1.Deployment {
 	replicas := int32(0)

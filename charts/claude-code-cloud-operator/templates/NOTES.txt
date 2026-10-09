@@ -1,0 +1,14 @@
+Operator namespace: {{ .Release.Namespace }}
+Verify the serving certificate and actual admission before enabling a Fleet.
+{{- if .Values.fleet.enabled }}
+Fleet: {{ .Values.fleet.name }} (suspended={{ .Values.fleet.suspended }})
+A suspended Fleet deliberately reports Ready=False. Use --wait=legacy with Helm 4
+for Fleet-enabled changes, or wait explicitly for the manager and certificate.
+Bind the network report to this Fleet's UID/policy after conformance testing, then
+explicitly activate it. Environment credentials must remain in the existing Secret.
+The Fleet is retained on uninstall; suspend and drain it before removing the operator.
+{{- else }}
+Operator-only mode. After certificate and admission readiness, optionally enable
+the chart Fleet with a second upgrade, supplying tested images and existing inputs.
+External Fleets remain supported.
+{{- end }}

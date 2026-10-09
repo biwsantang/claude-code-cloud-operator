@@ -447,3 +447,9 @@ revocation, target startup p99/lease tuning, support/licensing review, tagged pu
 remain pending. The capture hook and credentials were supplied only to the dedicated environment, not baked into
 images. No repository edits, commits or pushes were requested from Claude. See the evidence cleanup record for
 the disposable cluster and credential removal. Tasks 2.3/6.3/6.4/7.1 remain unchecked for their full criteria.
+
+## Shared environment lifecycle follow-up
+
+The [dedicated lifecycle trial](session-lifecycle-trial.md) records source verification, actual API-server
+compatibility, curated Helm inputs, native workspace/idle/reminder/SIGTERM behavior and remaining gates
+after the published RC2. It does not replace historical evidence above or publish a new release.

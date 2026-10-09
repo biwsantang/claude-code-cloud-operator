@@ -55,6 +55,12 @@ func Owner(owner metav1.Object, kind string) metav1.OwnerReference {
 	return r
 }
 func ValidateExecution(p api.ExecutionPolicy) error {
+	if err := ValidateLifecycle(p.Lifecycle); err != nil {
+		return err
+	}
+	if p.SessionConfigImage != "" && !digestImage.MatchString(p.SessionConfigImage) {
+		return errors.New("session configuration image must be digest pinned")
+	}
 	if !digestImage.MatchString(p.RunnerImage) || !safeID.MatchString(p.SecurityRevision) {
 		return errors.New("execution image or security revision is invalid")
 	}
@@ -141,6 +147,9 @@ func validateToleration(t corev1.Toleration) error {
 	return nil
 }
 func ValidateFleet(f *api.ClaudeRunnerFleet) error {
+	if f.Spec.Execution.SessionConfigImage != "" {
+		return errors.New("sessionConfigImage is managed by intake; set the Fleet hookImage")
+	}
 	if len(f.Name) > 40 || !safeID.MatchString(f.Spec.EnvironmentID) || !digestImage.MatchString(f.Spec.OrchestratorImage) || !digestImage.MatchString(f.Spec.HookImage) {
 		return errors.New("fleet identity or images are invalid")
 	}
@@ -165,6 +174,9 @@ func ValidateFleet(f *api.ClaudeRunnerFleet) error {
 	return ValidateExecution(f.Spec.Execution)
 }
 func ValidateOrder(w *api.ClaudeWorkOrder) error {
+	if w.Spec.Execution.Lifecycle != nil && !digestImage.MatchString(w.Spec.Execution.SessionConfigImage) {
+		return errors.New("lifecycle receipts require their frozen session configuration image")
+	}
 	if w.Spec.ClockOffsetSeconds < -3600 || w.Spec.ClockOffsetSeconds > 3600 {
 		return errors.New("receipt clock offset is outside bounds")
 	}

@@ -8,6 +8,7 @@ import (
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/hook"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/kubeclient"
+	"github.com/biwsantang/claude-code-cloud-operator/internal/sessionconfig"
 	"io"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +21,31 @@ import (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "save-reminder" {
+		sessionconfig.Remind(os.Stdin, os.Stdout, os.Getenv("CLAUDE_PROJECT_DIR"))
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "prepare-session-config" {
+		if len(os.Args) < 4 || len(os.Args) > 5 {
+			os.Exit(2)
+		}
+		base := os.Getenv("SELF_HOSTED_RUNNER_HOST_CONFIG_DIR")
+		var hostState []string
+		if base == "" {
+			base = filepath.Join(os.Getenv("HOME"), ".claude")
+			hostState = []string{filepath.Join(os.Getenv("HOME"), ".claude.json")}
+		}
+		source := ""
+		if len(os.Args) == 5 {
+			source = os.Args[4]
+		}
+		executable, err := os.Executable()
+		if err != nil || sessionconfig.Prepare(base, source, os.Args[2], executable, os.Args[3] == "true", hostState...) != nil {
+			fmt.Fprintln(os.Stderr, "SessionConfigurationInvalid")
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "install" {
 		install()
 		return

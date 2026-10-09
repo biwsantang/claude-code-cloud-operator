@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 import subprocess
 import unittest
+import json
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "charts/claude-code-cloud-operator"
@@ -19,6 +21,30 @@ def kind(doc):
 
 
 class PackagingTest(unittest.TestCase):
+    def test_optional_fleet_and_curated_input_validation(self):
+        command = ["helm", "template", "operator-test", str(CHART), "--namespace", "operator-other"]
+        values = {"managerImage":"example.invalid/manager@sha256:"+"a"*64}
+        def render(values):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as f:
+                json.dump(values,f); f.flush()
+                return subprocess.run(command+["-f",f.name], text=True, capture_output=True)
+        disabled=render(values)
+        self.assertEqual(disabled.returncode,0,disabled.stderr)
+        self.assertNotIn("kind: ClaudeRunnerFleet",disabled.stdout)
+        values["fleet"]={"enabled":True,"environmentID":"ccpool_fixture","environmentSecretRef":"existing-environment","networkReportRef":"existing-report","runtimeImage":"example.invalid/runtime@sha256:"+"b"*64,"hookImage":"example.invalid/hook@sha256:"+"c"*64,"securityRevision":"fixture","proxy":{"url":"http://proxy.proxy.svc:3128","namespace":"proxy","podLabels":{"app":"proxy"},"port":3128},"hostConfigRef":"admin-settings"}
+        enabled=render(values)
+        self.assertEqual(enabled.returncode,0,enabled.stderr)
+        fleet=[doc for doc in documents(enabled.stdout) if kind(doc)=="ClaudeRunnerFleet"]
+        self.assertEqual(len(fleet),1)
+        for text in ['namespace: operator-other', 'suspended: true', 'idleMinutes: 30', 'maxSessionMinutes: 480', 'shutdownWaitSeconds: 300', 'promptToSave: true', 'pushOutcomeOnRelease: false', 'name: "admin-settings"', 'sync-wave: "20"', 'helm.sh/resource-policy: keep', 'Prune=false,Delete=false']:
+            self.assertIn(text,fleet[0])
+        for field,value in [("args",["--capacity","99"]),("runtimeImage","runtime:latest"),("session",{"idleMinutes":481}),("session",{"shutdownWaitSeconds":86401}),("proxy",{"podLabels":{}})]:
+            bad=json.loads(json.dumps(values)); bad['fleet'][field]=value
+            rejected=render(bad)
+            self.assertNotEqual(rejected.returncode,0,(field,rejected.stdout))
+        bad=json.loads(json.dumps(values)); bad['fleet']['environmentSecretRef']=''
+        self.assertNotEqual(render(bad).returncode,0)
+
     def test_crds_and_namespace_retained_in_both_install_sources(self):
         raw = documents((ROOT / "deploy/install.yaml").read_text())
         crds = [doc for doc in raw if kind(doc) == "CustomResourceDefinition"]

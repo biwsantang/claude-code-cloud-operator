@@ -185,7 +185,12 @@ func (r *ClaudeRunnerFleetReconciler) converge(ctx context.Context, f *api.Claud
 		c.Spec.Strategy = d.Spec.Strategy
 		c.Spec.Template = d.Spec.Template
 	case *networkingv1.NetworkPolicy:
-		current.(*networkingv1.NetworkPolicy).Spec = d.Spec
+		c := current.(*networkingv1.NetworkPolicy)
+		c.Spec = d.Spec
+		if c.Annotations == nil {
+			c.Annotations = map[string]string{}
+		}
+		c.Annotations[contract.Group+"/declared-policy-digest"] = d.Annotations[contract.Group+"/declared-policy-digest"]
 	case *rbacv1.Role:
 		current.(*rbacv1.Role).Rules = d.Rules
 	case *rbacv1.RoleBinding:
