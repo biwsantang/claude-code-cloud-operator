@@ -77,3 +77,19 @@ Published RC2 artifacts were not replaced. See [lifecycle semantics](../operatio
 
 After qualification the dedicated cluster and local credential/session configuration files were removed.
 The unrelated existing cluster was preserved; no live Abacus environment was deployed or changed.
+
+## Toolchain security refresh
+
+PR verification flagged nine reachable vulnerability entries in Go 1.27.1 and the HTTP/2 dependency.
+The source now requires [Go 1.27.2](https://go.dev/dl/?mode=json) and `golang.org/x/net` 0.60.0,
+with its required sync/sys/term/text dependencies. Build, API-test and synthetic fixture Go images use
+the verified official multi-platform digest. [GO-2026-6603](https://pkg.go.dev/vuln/GO-2026-6603)
+and [GO-2026-6605](https://pkg.go.dev/vuln/GO-2026-6605) document representative HTTP fixes.
+The existing vulnerability and image scan gates remain enabled; no exception was added.
+
+The live native observations and local image digests above belong to lifecycle commit `10215ef`,
+before this dependency-only refresh. They are not claims about the refreshed binary digests. The refreshed `make verify` and real Kubernetes 1.33.0 API race suite pass locally. `govulncheck`
+reports no vulnerabilities for either Linux AMD64 or ARM64. Architecture builds and image scans
+qualify the refreshed artifacts separately in the PR checks. Native trials were
+not rerun after the dedicated credentials were removed. Published RC2 binaries remain unchanged and
+do not receive these fixes until a new reviewed release is published.

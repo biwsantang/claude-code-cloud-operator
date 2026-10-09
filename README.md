@@ -23,7 +23,7 @@ See the [Code Wiki map](wiki/quickstart.md), [community research](wiki/integrati
 
 ## Develop and verify
 
-Go 1.27.1, Docker, Kustomize, Helm and Python 3 are used. Run from a feature worktree:
+Go 1.27.2, Docker, Kustomize, Helm and Python 3 are used. Run from a feature worktree:
 
 ```sh
 make verify

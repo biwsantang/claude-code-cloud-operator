@@ -132,5 +132,21 @@
     "initialActiveDrainPatch": "denied because intake paused",
     "suspendedAbortPatch": "accepted"
   },
-  "receiptPhaseMeaning": "During Fleet drain/Abort, Succeeded with InfrastructureExitedDuringDrain records infrastructure cleanup, not successful user work. Captured native reply exists for Drain, absent for interrupted Abort."
+  "receiptPhaseMeaning": "During Fleet drain/Abort, Succeeded with InfrastructureExitedDuringDrain records infrastructure cleanup, not successful user work. Captured native reply exists for Drain, absent for interrupted Abort.",
+  "nativeTrialCommit": "10215ef708a340be6a15940d5863ac351579622e",
+  "toolchainRefresh": {
+    "reason": "PR vulnerability gate found 9 reachable entries with Go 1.27.1 / x/net 0.57.0",
+    "go": "1.27.2",
+    "xNet": "v0.60.0",
+    "goImageIndexDigest": "sha256:5cf287a799e6b94384bad13d16b14904c531f51ba65792237e122ce42b392f61",
+    "liveNativeRerun": false,
+    "liveDigestsScope": "Before dependency-only refresh; use PR image checks for refreshed builds",
+    "scanGateBypassed": false,
+    "verification": {
+      "makeVerify": "pass",
+      "makeTestAPI": "pass, Kubernetes 1.33.0 race suite",
+      "govulncheckAMD64": "No vulnerabilities found",
+      "govulncheckARM64": "No vulnerabilities found"
+    }
+  }
 }
