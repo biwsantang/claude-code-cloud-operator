@@ -80,6 +80,9 @@ Fleet instances, external Claude environments, organization settings or cloud cr
 Copy the [standalone Fleet example](config/samples/runners_v1alpha1_clauderunnerfleet.yaml) into your
 deployment repository, configure its environment/resources/lifecycle, and apply it separately after
 admission is ready. Operator Helm values contain only the manager image; there is no `fleet.enabled` switch.
+For multiple Claude environments, use [one Fleet per environment](examples/multiple-environments/README.md),
+each with its own environment Secret reference. The operator installation is shared; disposable runners
+receive per-assignment credentials.
 
 Installing the operator does not require KMS or a release-signing key. Network reports have an optional
 administrator-selected expiry; otherwise they remain valid until revoked or the Fleet/execution policy changes.

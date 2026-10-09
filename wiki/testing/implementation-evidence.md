@@ -453,3 +453,23 @@ the disposable cluster and credential removal. Tasks 2.3/6.3/6.4/7.1 remain unch
 The [dedicated lifecycle trial](session-lifecycle-trial.md) records source verification, actual API-server
 compatibility, historical chart input checks, native workspace/idle/reminder/SIGTERM behavior and remaining gates
 after the published RC2. It does not replace historical evidence above or publish a new release.
+
+## Multiple environments API follow-up
+
+The controller's existing environment/Fleet relationship is now documented with
+[complete two-environment user manifests](../../examples/multiple-environments/README.md).
+One operator watches both Fleets; their environment Secrets/report references are distinct.
+No new runtime provisioning mode or credential type was introduced.
+
+`make verify` and the full real Kubernetes 1.33.0 `make test-api` suite pass locally with the race detector.
+The added `multiple-environments-credential-boundaries` case verifies independent polling deployments,
+rotation of A without changing B's poller resource version, rejection of a foreign Fleet hook identity,
+distinct receipts/credential references for the same external order ID in different environments, and
+session Pods mounting only their own assignment credential. `duplicate-environment-claim` verifies
+`PoolClaimConflict`, unchanged ownership/resource version of the incumbent claim and no duplicate
+polling Deployment. Examples also parse as two suspended Fleets with distinct environment/Secret/report
+references; the Helm preview still contains no Fleet instance.
+
+These API tests use synthetic credentials and network reports. They qualify Kubernetes ownership,
+admission and credential wiring, not native signature verification, real cloud dispatch, cross-user
+network enforcement or production concurrency. No environment key or live deployment is used by them.

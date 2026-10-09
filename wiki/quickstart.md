@@ -31,6 +31,7 @@ Review [implementation evidence](testing/implementation-evidence.md) and the
 - [Operator practices and community lessons](integrations/operator-practices.md)
 - [Operator releases](workflows/release-candidates.md)
 - [Public Helm and Argo CD installation](operations/public-installation.md)
+- [Multiple Claude environments and credential ownership](operations/public-installation.md#multiple-environments-and-credentials)
 - [Shared environment session lifecycle and user Fleet manifests](operations/session-lifecycle.md)
 
 - [Runtime vulnerability findings and execution limits](testing/runtime-vulnerability-review.md)

@@ -221,6 +221,120 @@ func TestAPIRecovery(t *testing.T) {
 			t.Fatal("schema accepted shutdown outside bounds")
 		}
 	})
+	t.Run("multiple-environments-credential-boundaries", func(t *testing.T) {
+		a, hookA, tokenA := fixture(t, "multi-a")
+		b, hookB, tokenB := fixture(t, "multi-b")
+		// Distinct synthetic assignment credentials; native signature verification is outside envtest.
+		tokenA = append([]byte("a"), tokenA...)
+		tokenB = append([]byte("b"), tokenB...)
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		reconcileFleet := func(f *api.ClaudeRunnerFleet) {
+			t.Helper()
+			_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+			must(t, err)
+		}
+		poller := func(f *api.ClaudeRunnerFleet) *appsv1.Deployment {
+			t.Helper()
+			d := &appsv1.Deployment{}
+			must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, d))
+			return d
+		}
+		for _, f := range []*api.ClaudeRunnerFleet{a, b} {
+			secret := &corev1.Secret{}
+			must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.EnvironmentSecretRef.Name}, secret))
+			secret.Data[contract.EnvironmentKey] = []byte("synthetic-environment-" + f.Name)
+			must(t, admin.Update(ctx, secret))
+			reconcileFleet(f)
+			d := poller(f)
+			if !contract.Owns(f, d, "ClaudeRunnerFleet") || *d.Spec.Replicas != 2 {
+				t.Fatal("independent environment did not enable its own pollers")
+			}
+			for _, v := range d.Spec.Template.Spec.Volumes {
+				if v.Secret != nil && v.Secret.SecretName != f.Spec.EnvironmentSecretRef.Name {
+					t.Fatal("poller mounted another environment credential")
+				}
+			}
+		}
+		beforeA, beforeB := poller(a), poller(b)
+		secretA := &corev1.Secret{}
+		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: a.Spec.EnvironmentSecretRef.Name}, secretA))
+		secretA.Data[contract.EnvironmentKey] = []byte("rotated-synthetic-multi-a")
+		must(t, admin.Update(ctx, secretA))
+		reconcileFleet(a)
+		reconcileFleet(b)
+		if poller(a).Spec.Template.Annotations[contract.Group+"/credential-revision"] == beforeA.Spec.Template.Annotations[contract.Group+"/credential-revision"] {
+			t.Fatal("environment A rotation did not update its pollers")
+		}
+		if poller(b).ResourceVersion != beforeB.ResourceVersion {
+			t.Fatal("environment A rotation changed environment B pollers")
+		}
+		// A hook identity may not provision an assignment under another Fleet.
+		foreign := hook.Run(ctx, hookA, hook.Input{Namespace: namespace, Fleet: b.Name, Pool: b.Spec.EnvironmentID, Order: "foreign-fleet"}, tokenB, time.Now())
+		if foreign.Code != hook.Permanent {
+			t.Fatal("cross-Fleet hook identity was not rejected", foreign.Reason)
+		}
+		if err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(b.Spec.EnvironmentID, "foreign-fleet")}, &api.ClaudeWorkOrder{}); !apierrors.IsNotFound(err) {
+			t.Fatal("cross-Fleet hook created a receipt", err)
+		}
+		// The same external order ID in two environments must produce distinct receipts and credentials.
+		wa := intake(t, a, hookA, tokenA, "shared-order-id")
+		wb := intake(t, b, hookB, tokenB, "shared-order-id")
+		if wa.Name == wb.Name || wa.Spec.CredentialSecretRef.Name == wb.Spec.CredentialSecretRef.Name {
+			t.Fatal("different environments collided on assignment identity")
+		}
+		wr := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }, AdmissionReady: func(context.Context) bool { return true }}
+		for _, w := range []*api.ClaudeWorkOrder{wa, wb} {
+			for i := 0; i < 2; i++ {
+				_, err := wr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+				must(t, err)
+			}
+			pod := &corev1.Pod{}
+			must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), pod))
+			credentialVolumes := 0
+			for _, v := range pod.Spec.Volumes {
+				if v.Secret != nil {
+					credentialVolumes++
+					if v.Secret.SecretName != w.Spec.CredentialSecretRef.Name || len(v.Secret.Items) != 1 || v.Secret.Items[0].Key != contract.CredentialKey {
+						t.Fatal("runner received a shared or foreign environment credential")
+					}
+				}
+			}
+			if credentialVolumes != 1 {
+				t.Fatal("runner did not receive exactly its assignment credential")
+			}
+		}
+	})
+	t.Run("duplicate-environment-claim", func(t *testing.T) {
+		original, _, _ := fixture(t, "claimed-environment")
+		claimKey := client.ObjectKey{Namespace: namespace, Name: "pool-" + contract.Hash([]byte(original.Spec.EnvironmentID))[:40]}
+		claim := &corev1.ConfigMap{}
+		must(t, manager.Get(ctx, claimKey, claim))
+		before := claim.DeepCopy()
+		duplicate := original.DeepCopy()
+		duplicate.ObjectMeta = metav1.ObjectMeta{Name: "duplicate-environment", Namespace: namespace}
+		duplicate.Status = api.ClaudeRunnerFleetStatus{}
+		duplicate.Spec.Suspended = true
+		must(t, admin.Create(ctx, duplicate))
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(duplicate)})
+		must(t, err) // Install finalizer first.
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(duplicate)})
+		if !apierrors.IsConflict(err) {
+			t.Fatal("second Fleet claimed an existing environment", err)
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(duplicate), duplicate))
+		ready := apimeta.FindStatusCondition(duplicate.Status.Conditions, "Ready")
+		if ready == nil || ready.Status != metav1.ConditionFalse || ready.Reason != "PoolClaimConflict" {
+			t.Fatal("environment claim conflict was not visible in Fleet status")
+		}
+		must(t, manager.Get(ctx, claimKey, claim))
+		if claim.ResourceVersion != before.ResourceVersion || !contract.Owns(original, claim, "ClaudeRunnerFleet") {
+			t.Fatal("duplicate Fleet rewrote the original environment claim")
+		}
+		if err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: duplicate.Name + "-orchestrator"}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
+			t.Fatal("duplicate environment started a polling deployment", err)
+		}
+	})
 	t.Run("schema-default-and-activation-guards", func(t *testing.T) {
 		f, hc, _ := fixture(t, "guards")
 		_ = hc

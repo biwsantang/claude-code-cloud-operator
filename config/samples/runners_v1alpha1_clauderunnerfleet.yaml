@@ -12,6 +12,8 @@ spec:
   # Activate only after network conformance binds the report to this Fleet UID/policy.
   suspended: true
   environmentID: ccpool_REPLACE_ME
+  # Existing same-namespace Secret with key environment-secret; used by this Fleet's pollers.
+  # Disposable session runners receive separate assignment credentials.
   environmentSecretRef:
     name: example-environment
   networkReportRef:

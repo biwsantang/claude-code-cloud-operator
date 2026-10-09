@@ -99,6 +99,32 @@ Keep `suspended: true` while validating installation, proxy/network
 enforcement and a dedicated native trial. Complete the [activation and drain guide](install-and-drain.md)
 before enabling polling. An installed controller alone does not activate sessions.
 
+## Multiple environments and credentials
+
+One operator installation manages multiple Fleets in its watched namespace. Use one Fleet per Claude
+self-hosted environment ID; adding sessions to an existing environment does not require another Fleet.
+A conflicting environment claim is blocked with `Ready=False` / `PoolClaimConflict`. There is no configured
+Fleet-count limit, but usable capacity depends on cluster resources and external environment capacity.
+
+The [two-environment example](../../examples/multiple-environments/README.md) provides complete user
+manifests, each with its own environment ID, Secret reference and network report. Create the environments
+in Claude first, then supply their matching credentials externally. Reports bind each actual Fleet UID
+and policy even when Fleets share a proxy/runtime. Infrastructure administrators own these manifests;
+Claude session users do not need Kubernetes Fleet or Secret write access.
+
+| Setting or credential | Owner / consumer |
+| --- | --- |
+| Helm `managerImage` | Shared Kubernetes operator controller |
+| Fleet `orchestratorImage`, `hookImage`, `execution.runnerImage` | Workloads generated for that Fleet |
+| Fleet `environmentID` and `environmentSecretRef` | That environment's polling orchestrators; Secret key is `environment-secret` |
+| Single-use assignment credential | Generated WorkOrder credential Secret mounted only in its session runner |
+
+The environment key is not mounted into disposable session runners. In orchestrator mode they use a
+single-use work-order JWT, as described in the [native reference](https://code.claude.com/docs/en/self-hosted-environments-reference).
+Rotating an environment Secret rolls that Fleet's polling configuration, without rolling other Fleet
+pollers or changing accepted session credentials. Fleets share one infrastructure trust namespace;
+multiple Fleets are not separate installations or an isolation promise for untrusted CR administrators.
+
 ## Upgrade and remove
 
 Update versions through reviewed configuration. Suspend intake first and review compatibility with

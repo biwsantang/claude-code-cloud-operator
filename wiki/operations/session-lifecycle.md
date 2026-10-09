@@ -84,6 +84,11 @@ permissions control repository access. An account email or Kubernetes label is n
 Environment Secrets are administrator-managed and never exposed in Helm values or to session Pods;
 the disposable runner receives only its immutable assignment credential.
 
+Each Fleet represents one Claude environment and references its own environment Secret. One shared
+operator can manage multiple distinct environments; see [multiple environments and credentials](public-installation.md#multiple-environments-and-credentials)
+and the [two-Fleet example](../../examples/multiple-environments/README.md). Session runners receive
+assignment credentials rather than the shared environment key.
+
 Two orchestrator replicas improve polling availability, not total concurrent session capacity. Use
 Anthropic organization capacity/budget, namespace ResourceQuotas, node autoscaling and suitable CPU/
 memory requests to bound aggregate usage; there is no custom quota controller. Defaults are 8Gi
