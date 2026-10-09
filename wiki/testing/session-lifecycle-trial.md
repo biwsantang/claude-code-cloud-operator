@@ -31,6 +31,10 @@ Stop hook captures a whitelist of reply markers and `stop_hook_active`, without 
 For reminder verification it also probes the installed helper with the same native hook input/environment.
 That observation hook is not a production image feature.
 
+The chart observations below are historical qualification of commit `10215ef`. The current chart
+subsequently removed optional Fleet templating: it installs the operator only, and users apply Fleet
+manifests separately. No new native trial is claimed for that packaging simplification.
+
 ## Observed checks
 
 | Check | Evidence | Limit |
@@ -59,9 +63,8 @@ failures are excluded from successful lifecycle evidence; only identified prior 
 and accelerated resources were then revalidated. There is no total concurrency claim from two pollers.
 
 Helm 4's default watcher also timed out waiting for a deliberately suspended Fleet's `Ready=False`.
-The documented Fleet-enabled `--wait=legacy` path succeeds. A test-only imperative suspend briefly
-owned an SSA field; Helm reclaimed it with `--force-conflicts` in the disposable cluster. Normal chart
-activation should use one configuration owner.
+The then-documented Fleet-enabled `--wait=legacy` path succeeded. A test-only imperative suspend briefly
+owned an SSA field; Helm reclaimed it with `--force-conflicts` in the disposable cluster. That optional chart Fleet path has since been removed; user Fleet manifests should use one configuration owner.
 
 ## Remaining limits
 

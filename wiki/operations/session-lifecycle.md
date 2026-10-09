@@ -27,7 +27,8 @@ The durable WorkOrder's single-launch fence prevents relaunching its old assignm
 
 ## Small set of controls
 
-Helm `fleet.session` maps to typed `spec.execution.lifecycle`, then to the accepted WorkOrder.
+The administrator-owned Fleet declares typed `spec.execution.lifecycle`, which is frozen into each
+accepted WorkOrder.
 These are session settings, independent of manager configuration and credential expiry.
 
 | Setting | New-order default | Meaning |
@@ -41,7 +42,7 @@ These are session settings, independent of manager configuration and credential 
 Minutes are integers 0..10080 and shutdown seconds 0..86400. Positive idle time cannot exceed a
 positive maximum age. An economical example is 15/240 minutes; a longer workday can use 60/720.
 Neither is a named profile or a durability promise. Native CLI flags use minutes/seconds; similarly
-named native environment variables use milliseconds. The chart exposes the typed units only.
+named native environment variables use milliseconds. The Fleet API exposes these typed units.
 [Native flag and shutdown reference](https://code.claude.com/docs/en/self-hosted-environments-reference)
 
 The Pod's termination grace is `shutdownWaitSeconds + 120`: 420 seconds by default. The fixed native
@@ -93,34 +94,41 @@ finish/release before deleting resources. Abort requests Pod deletion and can in
 termination budget. Credential expiry bounds launch validity and retention of replay evidence;
 diagnostic retention controls receipts, neither is a session inactivity clock.
 
-## Helm Fleet setup
+## Operator installation and user Fleet configuration
 
-`fleet.enabled: false` preserves operator-only installation and external Fleets. To opt in, supply
-existing environment Secret and network report references, environment ID, proxy selectors/URL,
-security revision, and tested digest-pinned runtime/hook images. The release packages its own compatible
-hook digest; the source chart requires a tested hook. No organization runtime or environment key is
-invented. Optional `hostConfigRef` points to an existing immutable namespace ConfigMap; version its
-name when changing administrator settings. Existing image configuration and administrator files are
-materialized as regular files, with executable hook modes retained, before native startup snapshots them.
+The Helm chart installs only the operator, RBAC, admission/certificate resources and CRD definitions.
+It does not create a Fleet or accept environment/session policy in its values. Source installations
+supply `managerImage`; release packaging supplies the published manager digest. The Fleet remains an
+administrator-owned manifest, independent of the operator release.
 
-With direct Helm, install the operator with Fleet disabled and `--wait`, verify certificate and actual
-admission dry-run, then `helm upgrade ... -f fleet-values.yaml` with Fleet enabled and suspended.
-For that Fleet-enabled step, use `--wait=legacy` on Helm 4 (Helm 3 uses `--wait`), or explicitly wait
-only for the manager Deployment/certificate. Helm 4's default watcher can wait forever for a deliberately
-suspended Fleet's `Ready=False`; installation readiness and active intake readiness are different.
-An initial Fleet-enabled direct Helm install can race the fail-closed webhook; use the two-step path.
-For Argo CD, the generated Fleet uses sync wave 20 and skips pre-CRD dry-run, after lower-wave operator
-resources are healthy. Keep the initial `fleet.suspended: true`. Reproduce network conformance, bind
-the report to the actual Fleet UID/declared policy digest, then explicitly set suspended false.
+Copy the [standalone Fleet example](../../config/samples/runners_v1alpha1_clauderunnerfleet.yaml) into
+your deployment or GitOps repository. Supply existing environment Secret and network report references,
+environment ID, proxy selectors/URL, security revision and tested digest-pinned runtime/hook images.
+Use the compatible hook digest recorded in the operator release's `hook.json`. No organization runtime
+or environment key is supplied by the chart. Optional `execution.hostConfigRef` points to an existing
+immutable namespace ConfigMap; version its name when changing administrator settings. Existing image
+configuration and administrator files are materialized as regular files, with executable hook modes
+retained, before native startup snapshots them.
 
-Fleet prune/delete and Helm retention protections remain enabled. Retention does not mean draining:
-explicitly suspend/drain Fleets before removing the operator. If disabling chart Fleet management,
-its retained object remains administrator-owned until explicitly removed. On upgrades, suspend intake,
-apply compatible CRDs and update the Fleet hook to this operator version before resuming new intake;
-older hooks lack the new configuration helper. Keep pinned runtime qualification separate from chart
-publication. See [public installation](public-installation.md) and [drain instructions](install-and-drain.md).
+With direct Helm, install the operator with `--wait`, verify the certificate and actual admission dry-run,
+then apply the separate Fleet manifest with `kubectl`. Keep `spec.suspended: true` initially. Reproduce
+network conformance, bind the report to the actual Fleet UID/declared policy digest, then explicitly set
+suspended false. The Fleet is outside the Helm release, so operator installation does not wait for a
+suspended Fleet to report ready.
 
-The normal chart does not expose arbitrary native args/env, per-Pod capacity, internal timeouts or
-owner-lock overrides. Advanced compatible execution placement remains in the typed Fleet API.
+For Argo CD, keep the operator Helm Application and administrator-owned Fleet/input manifests separate.
+Sync the operator and verify admission first; then sync the suspended Fleet and complete the same
+network acceptance procedure. The example's prune/delete annotations protect its lifecycle; they do not
+drain it. Explicitly suspend/drain Fleets before removing the operator. Helm uninstall does not own or
+delete user Fleets.
+
+On upgrades, suspend intake, apply compatible CRDs and update the Fleet hook to this operator version
+before resuming new intake; older hooks lack the new configuration helper. Keep pinned runtime
+qualification separate from chart publication. See [public installation](public-installation.md) and
+[drain instructions](install-and-drain.md).
+
+The operator chart has no `fleet.enabled` switch. Per-session lifecycle/resources and compatible
+execution placement belong in the typed Fleet API. There is no implemented Fleet concurrency cap or
+queue-expiration setting; orchestrator replicas and startup leases are not substitutes for those controls.
 
 See the [dedicated native lifecycle trial](../testing/session-lifecycle-trial.md) for observed behavior and remaining gates.

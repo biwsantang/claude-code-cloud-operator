@@ -153,10 +153,7 @@ jobs:
     - name: Package chart and digest-pinned raw installation
       run: |
         manager=$(jq -r .image release/manager.json)
-        hook=$(jq -r .image release/hook.json)
         sed "s#^managerImage:.*#managerImage: \"$manager\"#" charts/claude-code-cloud-operator/values.yaml > /tmp/release-values.yaml
-        mv /tmp/release-values.yaml charts/claude-code-cloud-operator/values.yaml
-        sed "s#^  hookImage:.*#  hookImage: \"$hook\"#" charts/claude-code-cloud-operator/values.yaml > /tmp/release-values.yaml
         mv /tmp/release-values.yaml charts/claude-code-cloud-operator/values.yaml
         helm lint charts/claude-code-cloud-operator
         helm package charts/claude-code-cloud-operator --version "$VERSION" --app-version "$VERSION" --destination release

@@ -2,46 +2,5 @@
 # Release packaging replaces this value with the published manager digest.
 managerImage: ""
 
-# Operator-only installation remains the default. For Helm, install with --wait
-# first, verify webhook admission, then upgrade with fleet.enabled=true.
-# Argo CD applies this Fleet at wave 20, after the operator is healthy.
-# Existing external Fleets remain supported. This chart retains its Fleet on deletion;
-# suspend and explicitly drain/delete it before removing the operator.
-fleet:
-  enabled: false
-  name: shared
-  # Always create suspended; activate only after the report binds the actual Fleet UID.
-  suspended: true
-  environmentID: ""
-  environmentSecretRef: ""
-  networkReportRef: ""
-  # Tested digest-pinned native runtime (both polling and disposable session runner).
-  # The public operator does not supply an organization runtime or environment key.
-  runtimeImage: ""
-  # Must support this version's session configuration helper; do not use an older hook.
-  hookImage: ""
-  securityRevision: ""
-  proxy:
-    url: ""
-    namespace: ""
-    podLabels: {}
-    port: 3128
-  # Optional existing immutable ConfigMap in the release namespace; version its name for changes.
-  hostConfigRef: ""
-  # Polling availability, NOT maximum concurrent sessions.
-  orchestratorReplicas: 2
-  workspaceSize: 8Gi
-  resources:
-    requests:
-      cpu: "1"
-      memory: 2Gi
-    limits:
-      memory: 4Gi
-  session:
-    idleMinutes: 30
-    # Native release threshold plus its grace, not an exact hard kill at eight hours.
-    maxSessionMinutes: 480
-    shutdownWaitSeconds: 300
-    promptToSave: true
-    # Requires restricted claude/* refs. Best effort committed-work push only.
-    pushOutcomeOnRelease: false
+# This chart installs the operator and CRDs only. Configure Claude environments
+# separately using config/samples/runners_v1alpha1_clauderunnerfleet.yaml.

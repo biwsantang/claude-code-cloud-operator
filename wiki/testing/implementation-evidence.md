@@ -451,5 +451,5 @@ the disposable cluster and credential removal. Tasks 2.3/6.3/6.4/7.1 remain unch
 ## Shared environment lifecycle follow-up
 
 The [dedicated lifecycle trial](session-lifecycle-trial.md) records source verification, actual API-server
-compatibility, curated Helm inputs, native workspace/idle/reminder/SIGTERM behavior and remaining gates
+compatibility, historical chart input checks, native workspace/idle/reminder/SIGTERM behavior and remaining gates
 after the published RC2. It does not replace historical evidence above or publish a new release.

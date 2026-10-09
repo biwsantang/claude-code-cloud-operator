@@ -1,3 +1,4 @@
+# Administrator-owned workload manifest; apply separately after operator admission is ready.
 apiVersion: runners.biwsantang.github.io/v1alpha1
 kind: ClaudeRunnerFleet
 metadata:
@@ -5,10 +6,10 @@ metadata:
     argocd.argoproj.io/sync-options: Prune=false,Delete=false
   labels:
     app.kubernetes.io/name: claude-code-cloud-operator
-    app.kubernetes.io/managed-by: kustomize
   name: example
   namespace: cloud-operator-system
 spec:
+  # Activate only after network conformance binds the report to this Fleet UID/policy.
   suspended: true
   environmentID: ccpool_REPLACE_ME
   environmentSecretRef:
@@ -18,6 +19,7 @@ spec:
   # Replace all three example digests with verified images before activation.
   orchestratorImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   hookImage: example.invalid/hook@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  # Polling availability; this is not a concurrent-session limit.
   orchestratorReplicas: 2
   execution:
     runnerImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
@@ -35,6 +37,10 @@ spec:
       limits:
         memory: 4Gi
     workspaceSize: 8Gi
+    # Optional immutable administrator ConfigMap; version the name when changing it.
+    # hostConfigRef:
+    #   name: example-host-config-v1
+    # Applied to new assignments; each session workspace is disposable.
     lifecycle:
       idleMinutes: 30
       maxSessionMinutes: 480

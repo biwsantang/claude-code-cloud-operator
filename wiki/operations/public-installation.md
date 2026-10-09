@@ -70,8 +70,7 @@ installation resource kinds. For Argo's Helm source, `repoURL` has no `oci://` p
 The example uses manual sync and server-side apply, omits cascading deletion, and protects the child
 Application. CRDs carry `Prune=false,Delete=false`; the namespace and example Fleet have the same
 protection. Keep Fleet configuration in a separate Git application targeting the installation namespace.
-The source follow-up adds an opt-in chart Fleet using the [two-step Helm or Argo wave setup](session-lifecycle.md);
-that feature is not in the published `v0.1.0-rc.2` chart.
+The chart installs the operator and CRD definitions only; user Fleet policy stays in separate manifests.
 Only declare administrator-owned inputs and Fleets there. The operator owns its generated Pods,
 work orders, credential Secrets and network resources.
 [Argo CD Helm](https://argo-cd.readthedocs.io/en/stable/user-guide/helm/),
@@ -85,8 +84,18 @@ and avoid copying its tracking identity into operator-created resources.
 
 Copy the [suspended Fleet example](../../config/samples/runners_v1alpha1_clauderunnerfleet.yaml).
 Replace the environment ID, runtime and hook digests, resource requests, proxy policy and references.
+Session controls belong in `spec.execution.lifecycle`; see [lifecycle defaults and behavior](session-lifecycle.md).
+These lifecycle additions are source follow-up changes, absent from published `v0.1.0-rc.2` artifacts.
 Create the credential Secret externally with key `environment-secret`; never commit its value or put
-it in Helm values/CR specifications. Keep `suspended: true` while validating installation, proxy/network
+it in Helm values/CR specifications. After verifying certificate/admission readiness and supplying
+the referenced administrator inputs, apply your reviewed manifest separately:
+
+```sh
+kubectl --context YOUR_CONTEXT apply --dry-run=server -f fleet.yaml
+kubectl --context YOUR_CONTEXT apply -f fleet.yaml
+```
+
+Keep `suspended: true` while validating installation, proxy/network
 enforcement and a dedicated native trial. Complete the [activation and drain guide](install-and-drain.md)
 before enabling polling. An installed controller alone does not activate sessions.
 
