@@ -106,7 +106,7 @@ func Expiry(token []byte, serverTime string, now time.Time, maxLifetime int64) (
 }
 
 // Run uses an uncached API client. It never reads Secrets; completion admission checks collisions.
-func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.Time) Result {
+func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.Time, defaults ...contract.FleetDefaults) Result {
 	if in.Namespace == "" || in.Fleet == "" || in.Pool == "" || in.Order == "" {
 		return fail("MissingInput", Permanent)
 	}
@@ -146,6 +146,14 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 			return fail("ReceiptMismatch", Permanent)
 		}
 	} else {
+		d := contract.FleetDefaults{}
+		if len(defaults) > 0 {
+			d = defaults[0]
+		}
+		f = contract.ResolveFleet(f, d)
+		if contract.ValidateFleet(f) != nil {
+			return fail("FleetConfigurationUnavailable", Retryable)
+		}
 		expiry, err := Expiry(token, in.ServerTime, now, f.Spec.Execution.MaxTokenLifetimeSeconds)
 		if err != nil {
 			return invalidCredential(err)
@@ -157,13 +165,14 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 		if f.Spec.Suspended || !f.DeletionTimestamp.IsZero() {
 			return fail("FleetSuspended", Retryable)
 		}
-		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), ClockOffsetSeconds: offset, CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(f.Spec.Execution), Execution: *f.Spec.Execution.DeepCopy()}}
+		execution := contract.AcceptedExecution(f)
+		w = &api.ClaudeWorkOrder{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: in.Namespace, Finalizers: []string{contract.OrderFinalizer}, OwnerReferences: []metav1.OwnerReference{contract.Owner(f, "ClaudeRunnerFleet")}}, Spec: api.ClaudeWorkOrderSpec{FleetName: f.Name, FleetUID: string(f.UID), PoolID: in.Pool, OrderID: in.Order, TokenDigest: contract.Hash(token), ExpiresAt: metav1.NewTime(expiry), ClockOffsetSeconds: offset, CredentialSecretRef: api.LocalReference{Name: name + "-credential"}, PolicyDigest: contract.PolicyDigest(execution), Execution: execution}}
 		if err := contract.ValidateOrder(w); err != nil {
 			return fail("InvalidReceipt", Permanent)
 		}
 		if err := c.Create(ctx, w); err != nil {
 			if apierrors.IsAlreadyExists(err) {
-				return Run(ctx, c, in, token, now)
+				return Run(ctx, c, in, token, now, defaults...)
 			}
 			return fail("ReceiptWriteFailed", Classify(err))
 		}

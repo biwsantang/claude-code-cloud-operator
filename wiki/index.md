@@ -19,3 +19,5 @@ okf_version: "0.2"
 There are no accepted implementation specifications yet. Proposed requirements live with the change.
 
 - [curl advisory assessment](testing/curl-advisory-assessment.md)
+
+- [Installation defaults and minimal Fleets](operations/fleet-defaults.md)

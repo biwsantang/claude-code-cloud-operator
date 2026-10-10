@@ -24,6 +24,7 @@ import (
 // Client must be uncached: status conflicts fence concurrent controller invocations.
 type ClaudeWorkOrderReconciler struct {
 	client.Client
+	Defaults       contract.FleetDefaults
 	Scheme         *runtime.Scheme
 	CreatePod      func(context.Context, *corev1.Pod) error
 	AdmissionReady func(context.Context) bool
@@ -106,10 +107,11 @@ func (r *ClaudeWorkOrderReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if r.AdmissionReady == nil || !r.AdmissionReady(ctx) {
 		return r.save(ctx, w, "Accepted", "AdmissionUnavailable", false)
 	}
+	f = contract.ResolveFleet(f, r.Defaults)
 	if err := contract.InputsReady(ctx, r.Client, f, now); err != nil {
 		return r.save(ctx, w, "Accepted", "PrerequisitesUnavailable", false)
 	}
-	if w.Spec.PolicyDigest != contract.PolicyDigest(f.Spec.Execution) {
+	if !contract.ExecutionMatchesFleet(w.Spec.Execution, f.Spec.Execution) {
 		return r.save(ctx, w, "Expired", "PolicyChangedBeforeLaunch", true)
 	}
 	secret := &corev1.Secret{}

@@ -1,36 +1,13 @@
+# User-owned environment; installation supplies runtime, helper and network defaults.
+# Apply after configuring operator defaults. Suspended defaults to true.
 apiVersion: runners.biwsantang.github.io/v1alpha1
 kind: ClaudeRunnerFleet
 metadata:
-  annotations:
-    argocd.argoproj.io/sync-options: Prune=false,Delete=false
-  labels:
-    app.kubernetes.io/name: claude-code-cloud-operator
-    app.kubernetes.io/managed-by: kustomize
   name: example
   namespace: cloud-operator-system
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
 spec:
-  suspended: true
   environmentID: ccpool_REPLACE_ME
   environmentSecretRef:
     name: example-environment
-  networkReportRef:
-    name: example-network-report
-  # Replace all three example digests with verified images before activation.
-  orchestratorImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  hookImage: example.invalid/hook@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-  execution:
-    runnerImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-    securityRevision: replace-after-network-acceptance
-    proxy:
-      url: http://proxy.proxy.svc:3128
-      namespace: proxy
-      podLabels:
-        app: proxy
-      port: 3128
-    resources:
-      requests:
-        cpu: "1"
-        memory: 2Gi
-      limits:
-        memory: 4Gi
-    workspaceSize: 8Gi

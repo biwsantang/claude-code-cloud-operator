@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 import subprocess
 import unittest
+import json
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 CHART = ROOT / "charts/claude-code-cloud-operator"
@@ -19,6 +21,53 @@ def kind(doc):
 
 
 class PackagingTest(unittest.TestCase):
+    def test_chart_installs_operator_without_workload_instances(self):
+        command = ["helm", "template", "operator-test", str(CHART), "--include-crds",
+                   "--namespace", "operator-other"]
+        values = {"managerImage": "example.invalid/manager@sha256:" + "a" * 64}
+        def render(inputs):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as f:
+                json.dump(inputs, f); f.flush()
+                return subprocess.run(command + ["-f", f.name], text=True, capture_output=True)
+        rendered = render(values)
+        self.assertEqual(rendered.returncode, 0, rendered.stderr)
+        kinds = [kind(doc) for doc in documents(rendered.stdout)]
+        self.assertNotIn("ClaudeRunnerFleet", kinds)
+        self.assertNotIn("ClaudeWorkOrder", kinds)
+        self.assertEqual(kinds.count("Deployment"), 1)
+        self.assertEqual(kinds.count("CustomResourceDefinition"), 2)
+        # Reject the removed configuration rather than silently ignoring workload policy.
+        rejected = render(dict(values, fleet={"enabled": True}))
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertIn("fleet", rejected.stderr)
+        rejected = render({"managerImage": "example.invalid/manager:latest"})
+        self.assertNotEqual(rejected.returncode, 0)
+
+    def test_installation_defaults_reach_manager_without_creating_fleets(self):
+        inputs = {"managerImage": "example.invalid/manager@sha256:" + "a" * 64,
+                  "hookImage": "example.invalid/hook@sha256:" + "b" * 64,
+                  "runtime": {"image": "example.invalid/runtime@sha256:" + "c" * 64},
+                  "network": {"securityRevision": "verified-v2", "proxy": {
+                      "url": "http://approved.egress.svc:8080", "namespace": "egress",
+                      "podLabels": {"app": "approved"}, "port": 8080}}}
+        def render(values):
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json") as f:
+                json.dump(values, f); f.flush()
+                return subprocess.run(["helm", "template", "defaults", str(CHART), "--namespace", "operator-other", "-f", f.name], text=True, capture_output=True)
+        rendered = render(inputs)
+        self.assertEqual(rendered.returncode, 0, rendered.stderr)
+        encoded = re.search(r"name: FLEET_DEFAULTS\n\s+value: (.+)", rendered.stdout).group(1)
+        defaults = json.loads(json.loads(encoded))
+        self.assertEqual(defaults["runtimeImage"], inputs["runtime"]["image"])
+        self.assertEqual(defaults["proxy"], inputs["network"]["proxy"])
+        self.assertEqual(defaults["securityRevision"], "verified-v2")
+        self.assertIn('value: "' + inputs["hookImage"] + '"', rendered.stdout)
+        self.assertNotIn("ClaudeRunnerFleet", [kind(doc) for doc in documents(rendered.stdout)])
+        rejected = dict(inputs, runtime={"image": "runtime:latest"})
+        self.assertNotEqual(render(rejected).returncode, 0)
+        rejected = dict(inputs, network={"proxy": {"url": "http://approved.egress.svc:8080"}})
+        self.assertNotEqual(render(rejected).returncode, 0)
+
     def test_crds_and_namespace_retained_in_both_install_sources(self):
         raw = documents((ROOT / "deploy/install.yaml").read_text())
         crds = [doc for doc in raw if kind(doc) == "CustomResourceDefinition"]

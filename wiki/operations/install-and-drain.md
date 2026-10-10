@@ -22,14 +22,15 @@ Do not associate session identities with cloud roles. Keep image/config/Fleet/re
 
 1. Obtain tested manager/hook images and a separately accepted Claude runtime; pin image digests.
 2. Install cert-manager, create the trust namespace and apply Restricted Pod Security labels.
-3. Install the chart with a tested manager digest, or render the raw source after changing its placeholder image.
+3. Install the chart with tested manager/hook digests and shared runtime/network defaults, or configure the raw source images and `FLEET_DEFAULTS`.
 4. Wait for manager readiness and test installed admission. Credential webhook request filtering must remain intact.
 5. Create a suspended Fleet with same-namespace references. Create the environment key externally under Secret
    key `environment-secret`; never place it in a Fleet, chart value, example or repository.
 6. Provide an immutable host ConfigMap if required, and a controlled proxy with an explicit public destination
    allowlist that rejects Kubernetes, private services, metadata/cloud identity and redirect bypass.
 7. Reproduce all required network tests from fresh Pods with the Fleet's policy labels. A trusted producer writes
-   a ConfigMap with `report.json` matching `internal/contract.Report`. Bind Fleet UID, policy digest, evidence,
+   a ConfigMap with `report.json` matching `internal/contract.Report`. The default name is `<fleet-name>-network-report`, shown in
+   `status.effectiveConfiguration.networkReportRef`. Bind Fleet UID, effective `status.policyDigest`, evidence,
    test time and optional administrator-selected expiry. Untrusted sessions and hooks must have no report-write permission.
 8. Complete dedicated vendor acceptance. Activate only after these gates pass. Missing/expired reports or changed
    policy stop polling/new launches; active execution retains its existing policy.
@@ -66,7 +67,7 @@ before. There is no automatic daily cutoff or automatic renewal. Test time, Flee
 and every required successful deny/allow check remain mandatory.
 
 Reports are trusted administrator assertions, not continuous CNI health detection. Suspend before changing
-CNI, proxy or egress infrastructure, increment `execution.securityRevision`, run the fresh-Pod checks again
+CNI, proxy or egress infrastructure, increment installation `network.securityRevision` (or an explicit Fleet `execution.securityRevision`), run the fresh-Pod checks again
 and replace the report before resuming. Removing the report revokes approval. Policy/Fleet mismatch, failed
 checks, missing test time or an expired report block new intake/launches; active execution is preserved.
 

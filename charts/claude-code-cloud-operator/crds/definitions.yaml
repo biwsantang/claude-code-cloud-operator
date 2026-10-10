@@ -72,8 +72,9 @@ spec:
                 - name
                 type: object
               execution:
-                description: ExecutionPolicy is deliberately narrower than PodSpec.
-                  All accepted inputs are frozen in a receipt.
+                description: |-
+                  ExecutionPolicy is deliberately narrower than PodSpec. Fleets may omit installation defaults.
+                  WorkOrders require the complete resolved policy and must never inherit defaults. All accepted inputs are frozen in a receipt.
                 properties:
                   clockMarginSeconds:
                     default: 300
@@ -103,6 +104,48 @@ spec:
                     required:
                     - name
                     type: object
+                  lifecycle:
+                    description: Lifecycle is resolved and frozen only for newly accepted
+                      orders. Missing on a legacy receipt preserves legacy behavior.
+                    properties:
+                      idleMinutes:
+                        description: 'IdleMinutes releases idle sessions using the
+                          native runner. New-order default: 30; 0 disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      maxSessionMinutes:
+                        description: 'MaxSessionMinutes starts native release at the
+                          age threshold, followed by native grace. Default: 480; 0
+                          disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      promptToSave:
+                        description: 'PromptToSave installs a once-per-turn reminder,
+                          never an unconditional git commit/push. New-order default:
+                          true.'
+                        type: boolean
+                      pushOutcomeOnRelease:
+                        description: 'PushOutcomeOnRelease opts into native best-effort
+                          push of committed outcome refs. Restrict claude/* push access
+                          first. Default: false.'
+                        type: boolean
+                      shutdownWaitSeconds:
+                        description: 'ShutdownWaitSeconds lets an in-flight turn finish
+                          after SIGTERM. New-order default: 300; 0 skips the wait.'
+                        format: int32
+                        maximum: 86400
+                        minimum: 0
+                        type: integer
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Positive idleMinutes cannot exceed maxSessionMinutes
+                      rule: '!has(self.idleMinutes) || !has(self.maxSessionMinutes)
+                        || self.idleMinutes == 0 || self.maxSessionMinutes == 0 ||
+                        self.idleMinutes <= self.maxSessionMinutes'
                   maxTokenLifetimeSeconds:
                     default: 86400
                     format: int64
@@ -203,6 +246,12 @@ spec:
                   securityRevision:
                     minLength: 1
                     type: string
+                  sessionConfigImage:
+                    description: |-
+                      SessionConfigImage is stamped from the Fleet hook image at intake; do not set it on Fleets.
+                      It pins the materializer/save helper for the accepted order, independently of later hook upgrades.
+                    pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
+                    type: string
                   tolerations:
                     items:
                       description: |-
@@ -245,15 +294,6 @@ spec:
                   workspaceSize:
                     default: 8Gi
                     type: string
-                required:
-                - clockMarginSeconds
-                - diagnosticRetentionSeconds
-                - maxTokenLifetimeSeconds
-                - proxy
-                - resources
-                - runnerImage
-                - securityRevision
-                - workspaceSize
                 type: object
               hookImage:
                 pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
@@ -304,11 +344,7 @@ spec:
             - deletionPolicy
             - environmentID
             - environmentSecretRef
-            - execution
-            - hookImage
             - hookTimeoutSeconds
-            - networkReportRef
-            - orchestratorImage
             - orchestratorReplicas
             - spawnLeaseSeconds
             - suspended
@@ -376,6 +412,262 @@ spec:
                 x-kubernetes-list-type: map
               credentialRevision:
                 type: string
+              effectiveConfiguration:
+                description: FleetConfiguration exposes non-secret effective installation
+                  defaults without rewriting spec.
+                properties:
+                  execution:
+                    description: |-
+                      ExecutionPolicy is deliberately narrower than PodSpec. Fleets may omit installation defaults.
+                      WorkOrders require the complete resolved policy and must never inherit defaults. All accepted inputs are frozen in a receipt.
+                    properties:
+                      clockMarginSeconds:
+                        default: 300
+                        format: int64
+                        maximum: 3600
+                        minimum: 60
+                        type: integer
+                      diagnosticRetentionSeconds:
+                        default: 3600
+                        format: int64
+                        maximum: 604800
+                        minimum: 300
+                        type: integer
+                      hostConfigRef:
+                        description: LocalReference cannot name resources outside
+                          the Fleet namespace.
+                        properties:
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          namespace:
+                            description: Namespace exists only to explicitly reject
+                              cross-namespace input.
+                            maxLength: 0
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      lifecycle:
+                        description: Lifecycle is resolved and frozen only for newly
+                          accepted orders. Missing on a legacy receipt preserves legacy
+                          behavior.
+                        properties:
+                          idleMinutes:
+                            description: 'IdleMinutes releases idle sessions using
+                              the native runner. New-order default: 30; 0 disables.'
+                            format: int32
+                            maximum: 10080
+                            minimum: 0
+                            type: integer
+                          maxSessionMinutes:
+                            description: 'MaxSessionMinutes starts native release
+                              at the age threshold, followed by native grace. Default:
+                              480; 0 disables.'
+                            format: int32
+                            maximum: 10080
+                            minimum: 0
+                            type: integer
+                          promptToSave:
+                            description: 'PromptToSave installs a once-per-turn reminder,
+                              never an unconditional git commit/push. New-order default:
+                              true.'
+                            type: boolean
+                          pushOutcomeOnRelease:
+                            description: 'PushOutcomeOnRelease opts into native best-effort
+                              push of committed outcome refs. Restrict claude/* push
+                              access first. Default: false.'
+                            type: boolean
+                          shutdownWaitSeconds:
+                            description: 'ShutdownWaitSeconds lets an in-flight turn
+                              finish after SIGTERM. New-order default: 300; 0 skips
+                              the wait.'
+                            format: int32
+                            maximum: 86400
+                            minimum: 0
+                            type: integer
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Positive idleMinutes cannot exceed maxSessionMinutes
+                          rule: '!has(self.idleMinutes) || !has(self.maxSessionMinutes)
+                            || self.idleMinutes == 0 || self.maxSessionMinutes ==
+                            0 || self.idleMinutes <= self.maxSessionMinutes'
+                      maxTokenLifetimeSeconds:
+                        default: 86400
+                        format: int64
+                        maximum: 604800
+                        minimum: 60
+                        type: integer
+                      nodeSelector:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      proxy:
+                        properties:
+                          namespace:
+                            minLength: 1
+                            type: string
+                          podLabels:
+                            additionalProperties:
+                              type: string
+                            minProperties: 1
+                            type: object
+                          port:
+                            format: int32
+                            maximum: 65535
+                            minimum: 1
+                            type: integer
+                          url:
+                            pattern: ^http://[a-z0-9.-]+:[0-9]+$
+                            type: string
+                        required:
+                        - namespace
+                        - podLabels
+                        - port
+                        - url
+                        type: object
+                      resources:
+                        description: ResourceRequirements describes the compute resource
+                          requirements.
+                        properties:
+                          claims:
+                            description: |-
+                              Claims lists the names of resources, defined in spec.resourceClaims,
+                              that are used by this container.
+
+                              This field depends on the
+                              DynamicResourceAllocation feature gate.
+
+                              This field is immutable. It can only be set for containers.
+                            items:
+                              description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                              properties:
+                                name:
+                                  description: |-
+                                    Name must match the name of one entry in pod.spec.resourceClaims of
+                                    the Pod where this field is used. It makes that resource available
+                                    inside a container.
+                                  type: string
+                                request:
+                                  description: |-
+                                    Request is the name chosen for a request in the referenced claim.
+                                    If empty, everything from the claim is made available, otherwise
+                                    only the result of this request.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - name
+                            x-kubernetes-list-type: map
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Limits describes the maximum amount of compute resources allowed.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: |-
+                              Requests describes the minimum amount of compute resources required.
+                              If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                              otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                              More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                            type: object
+                        type: object
+                      runnerImage:
+                        pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
+                        type: string
+                      securityRevision:
+                        minLength: 1
+                        type: string
+                      sessionConfigImage:
+                        description: |-
+                          SessionConfigImage is stamped from the Fleet hook image at intake; do not set it on Fleets.
+                          It pins the materializer/save helper for the accepted order, independently of later hook upgrades.
+                        pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
+                        type: string
+                      tolerations:
+                        items:
+                          description: |-
+                            The pod this Toleration is attached to tolerates any taint that matches
+                            the triple <key,value,effect> using the matching operator <operator>.
+                          properties:
+                            effect:
+                              description: |-
+                                Effect indicates the taint effect to match. Empty means match all taint effects.
+                                When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                              type: string
+                            key:
+                              description: |-
+                                Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                                If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                              type: string
+                            operator:
+                              description: |-
+                                Operator represents a key's relationship to the value.
+                                Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+                                Exists is equivalent to wildcard for value, so that a pod can
+                                tolerate all taints of a particular category.
+                                Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
+                              type: string
+                            tolerationSeconds:
+                              description: |-
+                                TolerationSeconds represents the period of time the toleration (which must be
+                                of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                                it is not set, which means tolerate the taint forever (do not evict). Zero and
+                                negative values will be treated as 0 (evict immediately) by the system.
+                              format: int64
+                              type: integer
+                            value:
+                              description: |-
+                                Value is the taint value the toleration matches to.
+                                If the operator is Exists, the value should be empty, otherwise just a regular string.
+                              type: string
+                          type: object
+                        type: array
+                      workspaceSize:
+                        default: 8Gi
+                        type: string
+                    type: object
+                  hookImage:
+                    type: string
+                  networkReportRef:
+                    description: LocalReference cannot name resources outside the
+                      Fleet namespace.
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace exists only to explicitly reject cross-namespace
+                          input.
+                        maxLength: 0
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  orchestratorImage:
+                    type: string
+                required:
+                - execution
+                - hookImage
+                - networkReportRef
+                - orchestratorImage
+                type: object
               infrastructure:
                 properties:
                   pending:
@@ -484,8 +776,9 @@ spec:
                 - name
                 type: object
               execution:
-                description: ExecutionPolicy is deliberately narrower than PodSpec.
-                  All accepted inputs are frozen in a receipt.
+                description: |-
+                  ExecutionPolicy is deliberately narrower than PodSpec. Fleets may omit installation defaults.
+                  WorkOrders require the complete resolved policy and must never inherit defaults. All accepted inputs are frozen in a receipt.
                 properties:
                   clockMarginSeconds:
                     default: 300
@@ -515,6 +808,48 @@ spec:
                     required:
                     - name
                     type: object
+                  lifecycle:
+                    description: Lifecycle is resolved and frozen only for newly accepted
+                      orders. Missing on a legacy receipt preserves legacy behavior.
+                    properties:
+                      idleMinutes:
+                        description: 'IdleMinutes releases idle sessions using the
+                          native runner. New-order default: 30; 0 disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      maxSessionMinutes:
+                        description: 'MaxSessionMinutes starts native release at the
+                          age threshold, followed by native grace. Default: 480; 0
+                          disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      promptToSave:
+                        description: 'PromptToSave installs a once-per-turn reminder,
+                          never an unconditional git commit/push. New-order default:
+                          true.'
+                        type: boolean
+                      pushOutcomeOnRelease:
+                        description: 'PushOutcomeOnRelease opts into native best-effort
+                          push of committed outcome refs. Restrict claude/* push access
+                          first. Default: false.'
+                        type: boolean
+                      shutdownWaitSeconds:
+                        description: 'ShutdownWaitSeconds lets an in-flight turn finish
+                          after SIGTERM. New-order default: 300; 0 skips the wait.'
+                        format: int32
+                        maximum: 86400
+                        minimum: 0
+                        type: integer
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Positive idleMinutes cannot exceed maxSessionMinutes
+                      rule: '!has(self.idleMinutes) || !has(self.maxSessionMinutes)
+                        || self.idleMinutes == 0 || self.maxSessionMinutes == 0 ||
+                        self.idleMinutes <= self.maxSessionMinutes'
                   maxTokenLifetimeSeconds:
                     default: 86400
                     format: int64
@@ -615,6 +950,12 @@ spec:
                   securityRevision:
                     minLength: 1
                     type: string
+                  sessionConfigImage:
+                    description: |-
+                      SessionConfigImage is stamped from the Fleet hook image at intake; do not set it on Fleets.
+                      It pins the materializer/save helper for the accepted order, independently of later hook upgrades.
+                    pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
+                    type: string
                   tolerations:
                     items:
                       description: |-
@@ -657,16 +998,11 @@ spec:
                   workspaceSize:
                     default: 8Gi
                     type: string
-                required:
-                - clockMarginSeconds
-                - diagnosticRetentionSeconds
-                - maxTokenLifetimeSeconds
-                - proxy
-                - resources
-                - runnerImage
-                - securityRevision
-                - workspaceSize
                 type: object
+                x-kubernetes-validations:
+                - message: Receipts require complete resolved execution configuration
+                  rule: has(self.runnerImage) && has(self.securityRevision) && has(self.proxy)
+                    && has(self.resources)
               expiresAt:
                 format: date-time
                 type: string

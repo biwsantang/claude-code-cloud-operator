@@ -72,8 +72,9 @@ spec:
                 - name
                 type: object
               execution:
-                description: ExecutionPolicy is deliberately narrower than PodSpec.
-                  All accepted inputs are frozen in a receipt.
+                description: |-
+                  ExecutionPolicy is deliberately narrower than PodSpec. Fleets may omit installation defaults.
+                  WorkOrders require the complete resolved policy and must never inherit defaults. All accepted inputs are frozen in a receipt.
                 properties:
                   clockMarginSeconds:
                     default: 300
@@ -103,6 +104,48 @@ spec:
                     required:
                     - name
                     type: object
+                  lifecycle:
+                    description: Lifecycle is resolved and frozen only for newly accepted
+                      orders. Missing on a legacy receipt preserves legacy behavior.
+                    properties:
+                      idleMinutes:
+                        description: 'IdleMinutes releases idle sessions using the
+                          native runner. New-order default: 30; 0 disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      maxSessionMinutes:
+                        description: 'MaxSessionMinutes starts native release at the
+                          age threshold, followed by native grace. Default: 480; 0
+                          disables.'
+                        format: int32
+                        maximum: 10080
+                        minimum: 0
+                        type: integer
+                      promptToSave:
+                        description: 'PromptToSave installs a once-per-turn reminder,
+                          never an unconditional git commit/push. New-order default:
+                          true.'
+                        type: boolean
+                      pushOutcomeOnRelease:
+                        description: 'PushOutcomeOnRelease opts into native best-effort
+                          push of committed outcome refs. Restrict claude/* push access
+                          first. Default: false.'
+                        type: boolean
+                      shutdownWaitSeconds:
+                        description: 'ShutdownWaitSeconds lets an in-flight turn finish
+                          after SIGTERM. New-order default: 300; 0 skips the wait.'
+                        format: int32
+                        maximum: 86400
+                        minimum: 0
+                        type: integer
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Positive idleMinutes cannot exceed maxSessionMinutes
+                      rule: '!has(self.idleMinutes) || !has(self.maxSessionMinutes)
+                        || self.idleMinutes == 0 || self.maxSessionMinutes == 0 ||
+                        self.idleMinutes <= self.maxSessionMinutes'
                   maxTokenLifetimeSeconds:
                     default: 86400
                     format: int64
@@ -203,6 +246,12 @@ spec:
                   securityRevision:
                     minLength: 1
                     type: string
+                  sessionConfigImage:
+                    description: |-
+                      SessionConfigImage is stamped from the Fleet hook image at intake; do not set it on Fleets.
+                      It pins the materializer/save helper for the accepted order, independently of later hook upgrades.
+                    pattern: ^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$
+                    type: string
                   tolerations:
                     items:
                       description: |-
@@ -245,16 +294,11 @@ spec:
                   workspaceSize:
                     default: 8Gi
                     type: string
-                required:
-                - clockMarginSeconds
-                - diagnosticRetentionSeconds
-                - maxTokenLifetimeSeconds
-                - proxy
-                - resources
-                - runnerImage
-                - securityRevision
-                - workspaceSize
                 type: object
+                x-kubernetes-validations:
+                - message: Receipts require complete resolved execution configuration
+                  rule: has(self.runnerImage) && has(self.securityRevision) && has(self.proxy)
+                    && has(self.resources)
               expiresAt:
                 format: date-time
                 type: string

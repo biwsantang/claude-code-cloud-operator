@@ -14,6 +14,8 @@ generated:
 The candidate provides generated CRDs, namespaced RBAC, manager manifests, suspended examples and a chart.
 See the [installation/drain guide](install-and-drain.md) and [exact tested matrix](../testing/implementation-evidence.md).
 See the [public Helm/Argo guide](public-installation.md) for released artifact consumption.
+See [multiple environments and credentials](public-installation.md#multiple-environments-and-credentials)
+for one operator managing separate user Fleet manifests and environment Secrets.
 The dedicated native trial passed; each target installation still needs acceptance. Cluster-scoped CRD
 installation requires a cluster administrator. Use one installation per cluster watching one namespace.
 Multiple installation namespaces are not supported by the current global webhook/RBAC names.
@@ -43,3 +45,5 @@ drain and remove fleets before uninstalling controllers or CRDs. Forced finalize
 Roll back by suspending, keeping the network boundary in place, reverting future image/configuration,
 and allowing current runners to finish. Never bring old and replacement provisioning systems online for the same
 pool during cutover. These procedures require runtime verification before release.
+
+- [Installation defaults and minimal Fleets](fleet-defaults.md)

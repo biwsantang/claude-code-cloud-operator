@@ -27,6 +27,7 @@ import (
 
 type ClaudeRunnerFleetReconciler struct {
 	client.Client
+	Defaults       contract.FleetDefaults
 	Scheme         *runtime.Scheme
 	AdmissionReady func(context.Context) bool
 	Now            func() time.Time
@@ -59,6 +60,8 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		controllerutil.AddFinalizer(f, contract.FleetFinalizer)
 		return ctrl.Result{RequeueAfter: time.Millisecond}, r.Update(ctx, f)
 	}
+	stored := f.DeepCopy()
+	f = contract.ResolveFleet(f, r.Defaults)
 	before := f.Status.DeepCopy()
 	f.Status.ObservedGeneration = f.Generation
 	f.Status.PolicyDigest = contract.PolicyDigest(f.Spec.Execution)
@@ -70,6 +73,10 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		apimeta.SetStatusCondition(&f.Status.Conditions, metav1.Condition{Type: kind, Status: s, Reason: reason, Message: reason, ObservedGeneration: f.Generation})
 	}
 	valid := contract.ValidateFleet(f) == nil
+	f.Status.EffectiveConfiguration = nil
+	if valid {
+		f.Status.EffectiveConfiguration = &api.FleetConfiguration{OrchestratorImage: f.Spec.OrchestratorImage, HookImage: f.Spec.HookImage, NetworkReportRef: f.Spec.NetworkReportRef, Execution: *f.Spec.Execution.DeepCopy()}
+	}
 	condition("Configured", valid, "ConfigurationEvaluated")
 	credentials := false
 	revision := ""
@@ -94,7 +101,7 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			condition("Ready", false, "PoolClaimConflict")
 			condition("Degraded", true, "PoolClaimConflict")
 			if !reflect.DeepEqual(before, &f.Status) {
-				_ = r.Status().Update(ctx, f)
+				_ = r.updateFleetStatus(ctx, stored, f)
 			}
 			return ctrl.Result{}, err
 		}
@@ -106,7 +113,7 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Name: f.Name + "-hook", Namespace: f.Namespace, OwnerReferences: owner}, Rules: []rbacv1.PolicyRule{{APIGroups: []string{api.GroupVersion.Group}, Resources: []string{"clauderunnerfleets"}, ResourceNames: []string{f.Name}, Verbs: []string{"get"}}, {APIGroups: []string{api.GroupVersion.Group}, Resources: []string{"claudeworkorders"}, Verbs: []string{"get", "create", "update"}}, {APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"create"}}}}
 		binding := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: f.Name + "-hook", Namespace: f.Namespace, OwnerReferences: owner}, RoleRef: rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: role.Name}, Subjects: []rbacv1.Subject{{Kind: "ServiceAccount", Namespace: f.Namespace, Name: contract.HookAccount(f.Name)}}}
-		for _, o := range []client.Object{role, binding, builders.Network(f), builders.Orchestrator(f, revision, enabled)} {
+		for _, o := range []client.Object{role, binding, builders.Network(f), builders.Orchestrator(f, revision, enabled, r.Defaults)} {
 			if err := r.converge(ctx, f, o); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -153,11 +160,16 @@ func (r *ClaudeRunnerFleetReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 	telemetry.Retained.Set(string(f.UID), f.Status.Infrastructure)
 	if !reflect.DeepEqual(before, &f.Status) {
-		if err := r.Status().Update(ctx, f); err != nil {
+		if err := r.updateFleetStatus(ctx, stored, f); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 	return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+}
+
+func (r *ClaudeRunnerFleetReconciler) updateFleetStatus(ctx context.Context, stored, resolved *api.ClaudeRunnerFleet) error {
+	stored.Status = resolved.Status
+	return r.Status().Update(ctx, stored)
 }
 
 // converge changes only resources already owned by this Fleet; never adopts collisions.
@@ -185,7 +197,12 @@ func (r *ClaudeRunnerFleetReconciler) converge(ctx context.Context, f *api.Claud
 		c.Spec.Strategy = d.Spec.Strategy
 		c.Spec.Template = d.Spec.Template
 	case *networkingv1.NetworkPolicy:
-		current.(*networkingv1.NetworkPolicy).Spec = d.Spec
+		c := current.(*networkingv1.NetworkPolicy)
+		c.Spec = d.Spec
+		if c.Annotations == nil {
+			c.Annotations = map[string]string{}
+		}
+		c.Annotations[contract.Group+"/declared-policy-digest"] = d.Annotations[contract.Group+"/declared-policy-digest"]
 	case *rbacv1.Role:
 		current.(*rbacv1.Role).Rules = d.Rules
 	case *rbacv1.RoleBinding:

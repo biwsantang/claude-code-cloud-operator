@@ -23,7 +23,7 @@ See the [Code Wiki map](wiki/quickstart.md), [community research](wiki/integrati
 
 ## Develop and verify
 
-Go 1.27.1, Docker, Kustomize, Helm and Python 3 are used. Run from a feature worktree:
+Go 1.27.2, Docker, Kustomize, Helm and Python 3 are used. Run from a feature worktree:
 
 ```sh
 make verify
@@ -58,8 +58,10 @@ Choose a published version from [Releases](https://github.com/biwsantang/claude-
 The chart supplies the released manager digest; public manager/hook images need no registry login.
 Follow the [public installation guide](wiki/operations/public-installation.md) for prerequisites,
 Helm commands, [Argo CD examples](examples/argocd/application.yaml), Fleet setup and upgrades.
+The [Fleet lifecycle controls](wiki/operations/session-lifecycle.md) are a source follow-up;
+they are not included in the already published `v0.1.0-rc.2` artifacts.
 
-For a local source build before a release exists:
+For a local source build:
 
 Use a dedicated trust namespace and an existing cert-manager installation. Build and verify an image,
 then supply its digest. There is one operator installation per cluster in this initial version.
@@ -72,9 +74,17 @@ helm install cloud-operator charts/claude-code-cloud-operator --namespace cloud-
 
 Helm leaves namespace ownership to the administrator. Raw/Kustomize installation bootstraps its namespace.
 CRDs and the raw namespace carry explicit Argo prune/deletion protection.
-Replace the placeholder image in `config/install` before using raw manifests. Keep Fleets suspended until
+Replace both placeholder images and configure `FLEET_DEFAULTS` in `config/install` before using raw manifests. Keep Fleets suspended until
 the installation, proxy/network and dedicated vendor acceptance checks pass. The chart does not create
-external Claude environments, organization settings or cloud credentials.
+Fleet instances, external Claude environments, organization settings or cloud credentials.
+Copy the [standalone Fleet example](config/samples/runners_v1alpha1_clauderunnerfleet.yaml) into your
+deployment repository, configure its environment/resources/lifecycle, and apply it separately after
+admission is ready. The operator installation supplies shared runtime/helper/network defaults; there is no `fleet.enabled` switch.
+The [installation values example](examples/operator-values.yaml) configures them once. The minimal Fleet
+needs only its environment ID and Secret reference; see [inherited defaults](wiki/operations/fleet-defaults.md).
+For multiple Claude environments, use [one Fleet per environment](examples/multiple-environments/README.md),
+each with its own environment Secret reference. The operator installation is shared; disposable runners
+receive per-assignment credentials.
 
 Installing the operator does not require KMS or a release-signing key. Network reports have an optional
 administrator-selected expiry; otherwise they remain valid until revoked or the Fleet/execution policy changes.

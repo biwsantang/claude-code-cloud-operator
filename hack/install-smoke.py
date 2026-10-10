@@ -99,7 +99,13 @@ def main():
         checks[-1]["suspendedDrainAndGC"] = True
 
     chart = str(root / "charts/claude-code-cloud-operator")
-    values = ["--namespace", namespace, "--set", "managerImage=" + args.manager_image, "--wait", "--timeout", "120s"]
+    fixture_image = "example.invalid/runtime@sha256:" + "a" * 64
+    fixture_proxy = {"url": "http://proxy.proxy.svc:3128", "namespace": "proxy", "podLabels": {"app": "proxy"}, "port": 3128}
+    values = ["--set", "runtime.image=" + fixture_image,
+              "--set", "hookImage=example.invalid/hook@sha256:" + "b" * 64,
+              "--set", "network.proxy.url=http://proxy.proxy.svc:3128", "--set", "network.proxy.namespace=proxy",
+              "--set", "network.proxy.podLabels.app=proxy", "--set", "network.proxy.port=3128",
+              "--namespace", namespace, "--set", "managerImage=" + args.manager_image, "--wait", "--timeout", "120s"]
     run(helm + ["install", "claude-operator-smoke", chart] + values)
     installed("helm")
     run(helm + ["upgrade", "claude-operator-smoke", chart] + values)
@@ -113,6 +119,7 @@ def main():
     if source.count(placeholder) != 1:
         raise RuntimeError("raw manager placeholder changed; review the test substitution")
     source = source.replace(placeholder, args.manager_image)
+    source = source.replace("value: '{}'", "value: " + json.dumps(json.dumps({"runtimeImage": fixture_image, "proxy": fixture_proxy})))
     with tempfile.TemporaryDirectory(prefix="claude-install-smoke-") as directory:
         install = Path(directory) / "install.yaml"
         uninstall = Path(directory) / "uninstall.yaml"

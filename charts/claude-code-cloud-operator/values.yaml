@@ -1,2 +1,23 @@
-# Build and verify the manager, then provide its registry digest. No default release is published yet.
+# Source chart: provide verified manager and hook digests. Release packaging supplies both.
 managerImage: ""
+hookImage: ""
+
+# Configure a qualified Claude runtime once. Fleets inherit it; a Fleet may override
+# execution.runnerImage for its repository toolchain. No public runtime is bundled yet.
+runtime:
+  image: ""
+  orchestratorImage: ""
+
+# Existing enforced egress proxy, shared by all Fleets. This chart does not deploy a proxy.
+# Select a Service in its namespace; complete all four fields together.
+network:
+  securityRevision: installation-v1
+  proxy: {}
+  # proxy:
+  #   url: http://proxy.proxy.svc:3128
+  #   namespace: proxy
+  #   podLabels:
+  #     app: proxy
+  #   port: 3128
+
+# This chart installs the operator and CRDs. Apply environment-specific Fleets separately.

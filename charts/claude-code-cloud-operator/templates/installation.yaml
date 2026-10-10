@@ -220,6 +220,8 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: claude-code-cloud-operator
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -233,6 +235,10 @@ spec:
         command:
         - /manager
         env:
+        - name: FLEET_DEFAULTS
+          value: {{ dict "runtimeImage" .Values.runtime.image "orchestratorImage" .Values.runtime.orchestratorImage "securityRevision" .Values.network.securityRevision "proxy" (default nil .Values.network.proxy) | toJson | quote }}
+        - name: OPERATOR_HOOK_IMAGE
+          value: {{ .Values.hookImage | quote }}
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:

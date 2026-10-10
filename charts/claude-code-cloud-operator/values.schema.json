@@ -1,12 +1,89 @@
 {
-  "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "managerImage": {
       "type": "string",
-      "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$",
-      "description": "A verified manager image digest"
+      "pattern": "^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+    },
+    "hookImage": {
+      "type": "string",
+      "pattern": "^$|^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "pattern": "^$|^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+        },
+        "orchestratorImage": {
+          "type": "string",
+          "pattern": "^$|^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "image",
+        "orchestratorImage"
+      ]
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "securityRevision": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]{1,256}$"
+        },
+        "proxy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "pattern": "^http://[a-z0-9.-]+:[0-9]+$"
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1
+            },
+            "podLabels": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          },
+          "anyOf": [
+            {
+              "maxProperties": 0
+            },
+            {
+              "required": [
+                "url",
+                "namespace",
+                "podLabels",
+                "port"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "securityRevision",
+        "proxy"
+      ]
     }
   },
-  "required": ["managerImage"]
+  "required": [
+    "managerImage"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#"
 }

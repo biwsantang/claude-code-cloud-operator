@@ -22,6 +22,7 @@ import (
 )
 
 type Handler struct {
+	Defaults                  contract.FleetDefaults
 	Reader                    client.Reader
 	Namespace, ManagerAccount string
 	Now                       func() time.Time
@@ -64,6 +65,7 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		if json.Unmarshal(req.Object.Raw, f) != nil {
 			return deny("Malformed Fleet")
 		}
+		f = contract.ResolveFleet(f, h.Defaults)
 		if err := contract.ValidateFleet(f); err != nil {
 			return deny(err.Error())
 		}
@@ -163,8 +165,21 @@ func (h *Handler) Handle(ctx context.Context, req webhook.Request) webhook.Respo
 		if err := h.Reader.Get(ctx, client.ObjectKey{Namespace: w.Namespace, Name: w.Spec.FleetName}, f); err != nil {
 			return readFailure(err, "Fleet unavailable")
 		}
-		if string(f.UID) != w.Spec.FleetUID || !contract.Owns(f, w, "ClaudeRunnerFleet") || w.Spec.PoolID != f.Spec.EnvironmentID || !reflect.DeepEqual(w.Spec.Execution, f.Spec.Execution) {
+		f = contract.ResolveFleet(f, h.Defaults)
+		if string(f.UID) != w.Spec.FleetUID || !contract.Owns(f, w, "ClaudeRunnerFleet") || w.Spec.PoolID != f.Spec.EnvironmentID {
 			return deny("Fleet identity or policy mismatch")
+		}
+		if !contract.ExecutionMatchesFleet(w.Spec.Execution, f.Spec.Execution) {
+			if req.Operation == admissionv1.Create {
+				return webhook.Errored(503, errors.New("Fleet configuration changed; retry with current defaults"))
+			}
+			return deny("Fleet policy mismatch")
+		}
+		if req.Operation == admissionv1.Create && w.Spec.Execution.SessionConfigImage != "" && w.Spec.Execution.SessionConfigImage != f.Spec.HookImage {
+			return webhook.Errored(503, errors.New("New receipts must freeze resolved lifecycle and the Fleet hook image; retry with current defaults"))
+		}
+		if req.Operation == admissionv1.Create && !reflect.DeepEqual(w.Spec.Execution, contract.AcceptedExecution(f)) {
+			return deny("New receipts must freeze resolved lifecycle and the Fleet hook image")
 		}
 		if err := contract.InputsReady(ctx, h.Reader, f, h.now()); err != nil {
 			return prerequisiteFailure(err, "Fleet intake prerequisites are missing")

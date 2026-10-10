@@ -72,3 +72,6 @@ Review [container vulnerability findings and execution limits](runtime-vulnerabi
 Review the [curl advisory assessment](curl-advisory-assessment.md) for the eight retained advisory IDs and missing regressions.
 
 The [dedicated native trial](implementation-evidence.md#dedicated-native-vendor-trial-and-intake-fixes) records actual registration, OAuth/session turns, tools and recovery with explicit remaining gates.
+
+The [native lifecycle follow-up trial](session-lifecycle-trial.md) records accelerated idle release,
+workspace continuity, reminder behavior and graceful shutdown, with publication/runtime limits.

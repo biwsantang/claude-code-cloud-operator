@@ -1,0 +1,25 @@
+# Installation defaults are shared; each environment has its own credential.
+apiVersion: runners.biwsantang.github.io/v1alpha1
+kind: ClaudeRunnerFleet
+metadata:
+  name: team-a
+  namespace: cloud-operator-system
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  environmentID: ccpool_REPLACE_TEAM_A
+  environmentSecretRef:
+    name: team-a-environment
+---
+# Installation defaults are shared; each environment has its own credential.
+apiVersion: runners.biwsantang.github.io/v1alpha1
+kind: ClaudeRunnerFleet
+metadata:
+  name: team-b
+  namespace: cloud-operator-system
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  environmentID: ccpool_REPLACE_TEAM_B
+  environmentSecretRef:
+    name: team-b-environment

@@ -32,9 +32,10 @@ type ClaudeWorkOrderSpec struct {
 	ClockOffsetSeconds  int64          `json:"clockOffsetSeconds"`
 	CredentialSecretRef LocalReference `json:"credentialSecretRef"`
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
-	PolicyDigest string          `json:"policyDigest"`
-	Execution    ExecutionPolicy `json:"execution"`
-	Complete     bool            `json:"complete"`
+	PolicyDigest string `json:"policyDigest"`
+	// +kubebuilder:validation:XValidation:rule="has(self.runnerImage) && has(self.securityRevision) && has(self.proxy) && has(self.resources)",message="Receipts require complete resolved execution configuration"
+	Execution ExecutionPolicy `json:"execution"`
+	Complete  bool            `json:"complete"`
 }
 
 type ClaudeWorkOrderStatus struct {

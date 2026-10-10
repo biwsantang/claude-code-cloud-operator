@@ -7,6 +7,7 @@ import (
 	"flag"
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/admission"
+	"github.com/biwsantang/claude-code-cloud-operator/internal/contract"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/controller"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/kubeclient"
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -43,6 +44,15 @@ func main() {
 		ctrl.Log.Info("Exactly one WATCH_NAMESPACE is required")
 		os.Exit(1)
 	}
+	defaults, err := contract.DecodeDefaults(os.Getenv("FLEET_DEFAULTS"))
+	if err == nil && defaults.HookImage == "" {
+		defaults.HookImage = os.Getenv("OPERATOR_HOOK_IMAGE")
+		err = defaults.Validate()
+	}
+	if err != nil {
+		ctrl.Log.Info("Installation defaults are invalid")
+		os.Exit(1)
+	}
 	scheme := runtime.NewScheme()
 	_ = clientgoscheme.AddToScheme(scheme)
 	_ = api.AddToScheme(scheme)
@@ -58,7 +68,7 @@ func main() {
 		ctrl.Log.Info("Manager initialization failed")
 		os.Exit(1)
 	}
-	handler := &admission.Handler{Reader: direct, Namespace: namespace, ManagerAccount: account}
+	handler := &admission.Handler{Defaults: defaults, Reader: direct, Namespace: namespace, ManagerAccount: account}
 	mgr.GetWebhookServer().Register("/validate", &webadmission.Webhook{Handler: handler})
 	ready := func(ctx context.Context) bool {
 		if server.StartedChecker()(nil) != nil {
@@ -74,10 +84,10 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	if err := (&controller.ClaudeRunnerFleetReconciler{Client: direct, Scheme: scheme, AdmissionReady: ready}).SetupWithManager(mgr); err != nil {
+	if err := (&controller.ClaudeRunnerFleetReconciler{Defaults: defaults, Client: direct, Scheme: scheme, AdmissionReady: ready}).SetupWithManager(mgr); err != nil {
 		os.Exit(1)
 	}
-	if err := (&controller.ClaudeWorkOrderReconciler{Client: direct, Scheme: scheme, CreatePod: post, AdmissionReady: ready, Recorder: mgr.GetEventRecorderFor("claude-work-order")}).SetupWithManager(mgr); err != nil {
+	if err := (&controller.ClaudeWorkOrderReconciler{Defaults: defaults, Client: direct, Scheme: scheme, CreatePod: post, AdmissionReady: ready, Recorder: mgr.GetEventRecorderFor("claude-work-order")}).SetupWithManager(mgr); err != nil {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

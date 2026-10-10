@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/contract"
+	"k8s.io/utils/ptr"
 	"strings"
 	"testing"
 )
@@ -42,5 +43,33 @@ func TestSessionIsolation(t *testing.T) {
 	}
 	if p.Labels[contract.RoleLabel] != "session" {
 		t.Fatal("network selector missing")
+	}
+}
+
+func TestLifecycleBudgetAndLegacyPod(t *testing.T) {
+	w := &api.ClaudeWorkOrder{}
+	w.Spec.Execution.WorkspaceSize = "8Gi"
+	legacy := Runner(w)
+	if *legacy.Spec.TerminationGracePeriodSeconds != 120 || len(legacy.Spec.InitContainers) != 0 || strings.Contains(strings.Join(legacy.Spec.Containers[0].Args, " "), "--release-idle-session-min") {
+		t.Fatal("legacy receipt retroactively defaulted")
+	}
+	w.Spec.Execution.Lifecycle = contract.ResolvedLifecycle(nil)
+	w.Spec.Execution.SessionConfigImage = "frozen-hook@sha256:" + strings.Repeat("b", 64)
+	p := Runner(w)
+	args := strings.Join(p.Spec.Containers[0].Args, " ")
+	for _, flag := range []string{"--capacity 1", "--drain-grace-sec 0", "--release-idle-session-min 30", "--kill-session-after-min 480", "--drain-wait-sec 300", "--session-stop-grace-sec 5", "--post-session-hook-timeout-sec 60"} {
+		if !strings.Contains(args, flag) {
+			t.Fatal("missing", flag)
+		}
+	}
+	if *p.Spec.TerminationGracePeriodSeconds != 420 || strings.Contains(args, "--push-outcome-on-release") || len(p.Spec.InitContainers) != 2 || p.Spec.InitContainers[0].Image != w.Spec.Execution.SessionConfigImage {
+		t.Fatal("default lifecycle budget/config wrong")
+	}
+	w.Spec.Execution.Lifecycle.ShutdownWaitSeconds = ptr.To(int32(86400))
+	w.Spec.Execution.Lifecycle.PushOutcomeOnRelease = ptr.To(true)
+	w.Spec.Execution.Lifecycle.PromptToSave = ptr.To(false)
+	p = Runner(w)
+	if *p.Spec.TerminationGracePeriodSeconds != 86540 || len(p.Spec.InitContainers) != 2 || p.Spec.InitContainers[1].Command[3] != "false" || !strings.Contains(strings.Join(p.Spec.Containers[0].Args, " "), "--push-outcome-on-release") {
+		t.Fatal("opt-in flags/budget wrong")
 	}
 }

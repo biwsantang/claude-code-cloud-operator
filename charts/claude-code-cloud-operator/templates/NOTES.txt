@@ -1,0 +1,8 @@
+Operator namespace: {{ .Release.Namespace }}
+This chart installs the operator and CRDs. Create Fleet instances separately.
+Verify the serving certificate and actual admission before applying a suspended Fleet.
+Copy config/samples/runners_v1alpha1_clauderunnerfleet.yaml from this release's source,
+supply tested runtime/hook digests and existing administrator inputs, and apply it
+in the operator namespace. Keep environment credentials in the existing Secret.
+Bind the network report to the Fleet UID/policy after conformance testing, then
+explicitly activate it. Suspend and drain all Fleets before removing the operator.

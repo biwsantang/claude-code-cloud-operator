@@ -18,17 +18,21 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -73,7 +77,8 @@ func TestAPIRecovery(t *testing.T) {
 	must(t, err)
 	server := webhook.NewServer(webhook.Options{Host: e.WebhookInstallOptions.LocalServingHost, Port: e.WebhookInstallOptions.LocalServingPort, CertDir: e.WebhookInstallOptions.LocalServingCertDir})
 	admissionReads := &faultReader{Reader: admin}
-	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Reader: admissionReads, Namespace: namespace, ManagerAccount: "manager"}})
+	installationDefaults := contract.FleetDefaults{RuntimeImage: "example.invalid/runtime@sha256:" + strings.Repeat("a", 64), HookImage: "example.invalid/hook@sha256:" + strings.Repeat("b", 64), SecurityRevision: "installation-v1", Proxy: &api.ProxyPolicy{URL: "http://proxy.proxy.svc:3128", Namespace: "proxy", PodLabels: map[string]string{"app": "proxy"}, Port: 3128}}
+	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Defaults: installationDefaults, Reader: admissionReads, Namespace: namespace, ManagerAccount: "manager"}})
 	serverDone := make(chan error, 1)
 	go func() { serverDone <- server.Start(ctx) }()
 	defer func() {
@@ -144,6 +149,311 @@ func TestAPIRecovery(t *testing.T) {
 		}
 		return w
 	}
+	t.Run("minimal-fleet-inherits-installation-and-freezes-intake", func(t *testing.T) {
+		// Raw two-field input proves the API schema accepts the advertised manifest.
+		minimal := &unstructured.Unstructured{Object: map[string]interface{}{"apiVersion": api.GroupVersion.String(), "kind": "ClaudeRunnerFleet", "metadata": map[string]interface{}{"name": "minimal", "namespace": namespace}, "spec": map[string]interface{}{"environmentID": "ccpool_minimal", "environmentSecretRef": map[string]interface{}{"name": "minimal-environment"}}}}
+		must(t, admin.Create(ctx, minimal))
+		f := &api.ClaudeRunnerFleet{}
+		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "minimal"}, f))
+		if !f.Spec.Suspended || f.Spec.HookImage != "" || f.Spec.Execution.RunnerImage != "" || f.Spec.NetworkReportRef.Name != "" {
+			t.Fatal("inherited configuration was written into spec")
+		}
+		fr := &controller.ClaudeRunnerFleetReconciler{Defaults: installationDefaults, Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		reconcile := func() {
+			_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+			must(t, err)
+			must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		}
+		reconcile()
+		reconcile()
+		if f.Status.EffectiveConfiguration == nil || f.Status.EffectiveConfiguration.HookImage != installationDefaults.HookImage || f.Spec.HookImage != "" {
+			t.Fatal("effective status missing or spec rewritten")
+		}
+		resolved := contract.ResolveFleet(f, installationDefaults)
+		if f.Status.PolicyDigest != contract.PolicyDigest(resolved.Spec.Execution) {
+			t.Fatal("network approval digest did not use effective policy")
+		}
+		f.Spec.Suspended = false
+		if err := admin.Update(ctx, f); err == nil {
+			t.Fatal("activation without credentials and network evidence accepted")
+		}
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		must(t, admin.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "minimal-environment", Namespace: namespace}, Data: map[string][]byte{contract.EnvironmentKey: []byte("synthetic")}}))
+		f.Spec.Suspended = false
+		if err := admin.Update(ctx, f); err == nil {
+			t.Fatal("credentials alone waived network acceptance")
+		}
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		report := contract.Report{FleetUID: string(f.UID), PolicyDigest: f.Status.PolicyDigest, TestedAt: time.Now().UTC(), ValidUntil: time.Now().Add(time.Hour).UTC(), DirectDenied: true, PrivateDenied: true, MetadataDenied: true, KubernetesDenied: true, ProxyAllowed: true, ProxyDenied: true, FreshPodTested: true, Evidence: "synthetic API test; not network acceptance"}
+		b, _ := json.Marshal(report)
+		must(t, admin.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "minimal-network-report", Namespace: namespace}, Data: map[string]string{"report.json": string(b)}}))
+		f.Spec.Suspended = false
+		must(t, admin.Update(ctx, f))
+		reconcile()
+		dep := &appsv1.Deployment{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "minimal-orchestrator"}, dep))
+		if *dep.Spec.Replicas != 2 || dep.Spec.Template.Spec.Containers[0].Image != installationDefaults.RuntimeImage || dep.Spec.Template.Spec.InitContainers[0].Image != installationDefaults.HookImage {
+			t.Fatal("poller images did not inherit installation defaults")
+		}
+		var pollerDefaults contract.FleetDefaults
+		for _, env := range dep.Spec.Template.Spec.Containers[0].Env {
+			if env.Name == "OPERATOR_FLEET_DEFAULTS" {
+				var err error
+				pollerDefaults, err = contract.DecodeDefaults(env.Value)
+				must(t, err)
+			}
+		}
+		if !reflect.DeepEqual(pollerDefaults, installationDefaults) {
+			t.Fatal("hook configuration differs from admission")
+		}
+		hookCfg := rest.CopyConfig(cfg)
+		hookCfg.Impersonate = rest.ImpersonationConfig{UserName: contract.ManagerUser(namespace, contract.HookAccount(f.Name)), Groups: []string{"system:authenticated", "system:serviceaccounts", "system:serviceaccounts:" + namespace}}
+		hc, err := client.New(hookCfg, client.Options{Scheme: scheme})
+		must(t, err)
+		payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, time.Now().Add(time.Hour).Unix())))
+		token := []byte("synthetic." + payload + ".not-a-signature")
+		input := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "defaulted"}
+		result := hook.Run(ctx, hc, input, token, time.Now(), pollerDefaults)
+		if result.Code != 0 {
+			t.Fatalf("minimal Fleet intake failed: %s", result.Reason)
+		}
+		w := &api.ClaudeWorkOrder{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: result.Name}, w))
+		if !reflect.DeepEqual(w.Spec.Execution, contract.AcceptedExecution(resolved)) {
+			t.Fatal("receipt did not freeze resolved defaults")
+		}
+		wr := &controller.ClaudeWorkOrderReconciler{Defaults: installationDefaults, Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }}
+		_, err = wr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		pod := &corev1.Pod{}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), pod))
+		if pod.Spec.Containers[0].Image != installationDefaults.RuntimeImage || pod.Spec.InitContainers[0].Image != installationDefaults.HookImage || *pod.Spec.AutomountServiceAccountToken {
+			t.Fatal("defaulted session runtime or isolation incorrect")
+		}
+		frozen := w.DeepCopy()
+		changed := pollerDefaults
+		changed.RuntimeImage = "example.invalid/changed@sha256:" + strings.Repeat("c", 64)
+		changed.HookImage = "example.invalid/changed-hook@sha256:" + strings.Repeat("d", 64)
+		result = hook.Run(ctx, hc, input, token, time.Now(), changed)
+		if result.Code != 0 || result.Reason != "Redelivered" {
+			t.Fatal("defaults change broke completed redelivery")
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !reflect.DeepEqual(w.Spec, frozen.Spec) {
+			t.Fatal("defaults update rewrote accepted intent")
+		}
+		input.Order = "stale-poller"
+		if hook.Run(ctx, hc, input, token, time.Now(), changed).Code != hook.Retryable {
+			t.Fatal("stale poller defaults were accepted or permanently discarded")
+		}
+		changed = pollerDefaults
+		changed.HookImage = "example.invalid/changed-hook@sha256:" + strings.Repeat("d", 64)
+		input.Order = "stale-helper"
+		if hook.Run(ctx, hc, input, token, time.Now(), changed).Code != hook.Retryable {
+			t.Fatal("stale helper configuration must retry")
+		}
+		// A WorkOrder cannot inherit a missing runtime even though Fleets can.
+		forged := frozen.DeepCopy()
+		forged.Name = contract.Name(f.Spec.EnvironmentID, "missing-image")
+		forged.ResourceVersion = ""
+		forged.UID = ""
+		forged.Status = api.ClaudeWorkOrderStatus{}
+		forged.Spec.OrderID = "missing-image"
+		forged.Spec.Complete = false
+		forged.Spec.Execution.RunnerImage = ""
+		forged.Spec.CredentialSecretRef.Name = forged.Name + "-credential"
+		if err := hc.Create(ctx, forged); err == nil {
+			t.Fatal("receipt with unresolved execution accepted")
+		}
+	})
+	t.Run("lifecycle-intake-freeze-and-schema-compatibility", func(t *testing.T) {
+		f, hc, token := fixture(t, "lifecycle")
+		if f.Spec.Execution.Lifecycle != nil {
+			t.Fatal("Fleet retroactively defaulted")
+		}
+		w := intake(t, f, hc, token, "lifecycle-order")
+		if w.Spec.Execution.Lifecycle == nil || *w.Spec.Execution.Lifecycle.IdleMinutes != 30 || w.Spec.Execution.SessionConfigImage != f.Spec.HookImage {
+			t.Fatal("intake defaults not frozen")
+		}
+		for _, variant := range []string{"legacy-new-create", "foreign-helper"} {
+			forged := w.DeepCopy()
+			forged.Spec.OrderID = variant
+			forged.Name = contract.Name(forged.Spec.PoolID, variant)
+			forged.ResourceVersion, forged.UID = "", ""
+			forged.Spec.CredentialSecretRef.Name = forged.Name + "-credential"
+			forged.Spec.Complete = false
+			forged.Status = api.ClaudeWorkOrderStatus{}
+			if variant == "legacy-new-create" {
+				forged.Spec.Execution = *f.Spec.Execution.DeepCopy()
+			} else {
+				forged.Spec.Execution.SessionConfigImage = "example.invalid/foreign@sha256:" + strings.Repeat("b", 64)
+			}
+			forged.Spec.PolicyDigest = contract.PolicyDigest(forged.Spec.Execution)
+			if err := hc.Create(ctx, forged); err == nil || !strings.Contains(err.Error(), "freeze resolved lifecycle") {
+				t.Fatal("new receipt bypassed defaults/helper provenance", err)
+			}
+		}
+		changed := w.DeepCopy()
+		changed.Spec.Execution.Lifecycle.IdleMinutes = ptr.To(int32(15))
+		changed.Spec.PolicyDigest = contract.PolicyDigest(changed.Spec.Execution)
+		if hc.Update(ctx, changed) == nil {
+			t.Fatal("accepted lifecycle mutated")
+		}
+		bad := f.DeepCopy()
+		bad.Spec.Suspended = true
+		bad.Spec.Execution.Lifecycle = &api.SessionLifecycle{MaxSessionMinutes: ptr.To(int32(29))}
+		if admin.Update(ctx, bad) == nil {
+			t.Fatal("partial lifecycle bypassed resolved validation")
+		}
+		// Outside the installation admission scope, the API server independently exercises
+		// the upgraded schema on a stored legacy receipt: no default insertion on read/update.
+		legacyNS := "legacy-schema-fixture"
+		must(t, admin.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: legacyNS}}))
+		legacy := w.DeepCopy()
+		legacy.Namespace = legacyNS
+		legacy.ResourceVersion = ""
+		legacy.UID = ""
+		legacy.OwnerReferences = nil
+		legacy.Finalizers = nil
+		legacy.Status = api.ClaudeWorkOrderStatus{}
+		legacy.Spec.Execution = *f.Spec.Execution.DeepCopy()
+		legacy.Spec.PolicyDigest = contract.PolicyDigest(legacy.Spec.Execution)
+		must(t, admin.Create(ctx, legacy))
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(legacy), legacy))
+		if legacy.Spec.Execution.Lifecycle != nil || legacy.Spec.Execution.SessionConfigImage != "" || legacy.Spec.PolicyDigest != contract.PolicyDigest(legacy.Spec.Execution) {
+			t.Fatal("stored legacy receipt changed")
+		}
+		legacy.Annotations = map[string]string{"fixture": "roundtrip"}
+		must(t, admin.Update(ctx, legacy))
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(legacy), legacy))
+		if legacy.Spec.Execution.Lifecycle != nil {
+			t.Fatal("legacy update inserted lifecycle")
+		}
+		invalid := legacy.DeepCopy()
+		invalid.Spec.Execution.Lifecycle = &api.SessionLifecycle{IdleMinutes: ptr.To(int32(31)), MaxSessionMinutes: ptr.To(int32(30))}
+		if admin.Update(ctx, invalid) == nil {
+			t.Fatal("schema CEL accepted invalid minutes")
+		}
+		invalid = legacy.DeepCopy()
+		invalid.Spec.Execution.Lifecycle = &api.SessionLifecycle{ShutdownWaitSeconds: ptr.To(int32(86401))}
+		if admin.Update(ctx, invalid) == nil {
+			t.Fatal("schema accepted shutdown outside bounds")
+		}
+	})
+	t.Run("multiple-environments-credential-boundaries", func(t *testing.T) {
+		a, hookA, tokenA := fixture(t, "multi-a")
+		b, hookB, tokenB := fixture(t, "multi-b")
+		// Distinct synthetic assignment credentials; native signature verification is outside envtest.
+		tokenA = append([]byte("a"), tokenA...)
+		tokenB = append([]byte("b"), tokenB...)
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		reconcileFleet := func(f *api.ClaudeRunnerFleet) {
+			t.Helper()
+			_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+			must(t, err)
+		}
+		poller := func(f *api.ClaudeRunnerFleet) *appsv1.Deployment {
+			t.Helper()
+			d := &appsv1.Deployment{}
+			must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Name + "-orchestrator"}, d))
+			return d
+		}
+		for _, f := range []*api.ClaudeRunnerFleet{a, b} {
+			secret := &corev1.Secret{}
+			must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: f.Spec.EnvironmentSecretRef.Name}, secret))
+			secret.Data[contract.EnvironmentKey] = []byte("synthetic-environment-" + f.Name)
+			must(t, admin.Update(ctx, secret))
+			reconcileFleet(f)
+			d := poller(f)
+			if !contract.Owns(f, d, "ClaudeRunnerFleet") || *d.Spec.Replicas != 2 {
+				t.Fatal("independent environment did not enable its own pollers")
+			}
+			for _, v := range d.Spec.Template.Spec.Volumes {
+				if v.Secret != nil && v.Secret.SecretName != f.Spec.EnvironmentSecretRef.Name {
+					t.Fatal("poller mounted another environment credential")
+				}
+			}
+		}
+		beforeA, beforeB := poller(a), poller(b)
+		secretA := &corev1.Secret{}
+		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: a.Spec.EnvironmentSecretRef.Name}, secretA))
+		secretA.Data[contract.EnvironmentKey] = []byte("rotated-synthetic-multi-a")
+		must(t, admin.Update(ctx, secretA))
+		reconcileFleet(a)
+		reconcileFleet(b)
+		if poller(a).Spec.Template.Annotations[contract.Group+"/credential-revision"] == beforeA.Spec.Template.Annotations[contract.Group+"/credential-revision"] {
+			t.Fatal("environment A rotation did not update its pollers")
+		}
+		if poller(b).ResourceVersion != beforeB.ResourceVersion {
+			t.Fatal("environment A rotation changed environment B pollers")
+		}
+		// A hook identity may not provision an assignment under another Fleet.
+		foreign := hook.Run(ctx, hookA, hook.Input{Namespace: namespace, Fleet: b.Name, Pool: b.Spec.EnvironmentID, Order: "foreign-fleet"}, tokenB, time.Now())
+		if foreign.Code != hook.Permanent {
+			t.Fatal("cross-Fleet hook identity was not rejected", foreign.Reason)
+		}
+		if err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: contract.Name(b.Spec.EnvironmentID, "foreign-fleet")}, &api.ClaudeWorkOrder{}); !apierrors.IsNotFound(err) {
+			t.Fatal("cross-Fleet hook created a receipt", err)
+		}
+		// The same external order ID in two environments must produce distinct receipts and credentials.
+		wa := intake(t, a, hookA, tokenA, "shared-order-id")
+		wb := intake(t, b, hookB, tokenB, "shared-order-id")
+		if wa.Name == wb.Name || wa.Spec.CredentialSecretRef.Name == wb.Spec.CredentialSecretRef.Name {
+			t.Fatal("different environments collided on assignment identity")
+		}
+		wr := &controller.ClaudeWorkOrderReconciler{Client: manager, Scheme: scheme, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }, AdmissionReady: func(context.Context) bool { return true }}
+		for _, w := range []*api.ClaudeWorkOrder{wa, wb} {
+			for i := 0; i < 2; i++ {
+				_, err := wr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+				must(t, err)
+			}
+			pod := &corev1.Pod{}
+			must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), pod))
+			credentialVolumes := 0
+			for _, v := range pod.Spec.Volumes {
+				if v.Secret != nil {
+					credentialVolumes++
+					if v.Secret.SecretName != w.Spec.CredentialSecretRef.Name || len(v.Secret.Items) != 1 || v.Secret.Items[0].Key != contract.CredentialKey {
+						t.Fatal("runner received a shared or foreign environment credential")
+					}
+				}
+			}
+			if credentialVolumes != 1 {
+				t.Fatal("runner did not receive exactly its assignment credential")
+			}
+		}
+	})
+	t.Run("duplicate-environment-claim", func(t *testing.T) {
+		original, _, _ := fixture(t, "claimed-environment")
+		claimKey := client.ObjectKey{Namespace: namespace, Name: "pool-" + contract.Hash([]byte(original.Spec.EnvironmentID))[:40]}
+		claim := &corev1.ConfigMap{}
+		must(t, manager.Get(ctx, claimKey, claim))
+		before := claim.DeepCopy()
+		duplicate := original.DeepCopy()
+		duplicate.ObjectMeta = metav1.ObjectMeta{Name: "duplicate-environment", Namespace: namespace}
+		duplicate.Status = api.ClaudeRunnerFleetStatus{}
+		duplicate.Spec.Suspended = true
+		must(t, admin.Create(ctx, duplicate))
+		fr := &controller.ClaudeRunnerFleetReconciler{Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(duplicate)})
+		must(t, err) // Install finalizer first.
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(duplicate)})
+		if !apierrors.IsConflict(err) {
+			t.Fatal("second Fleet claimed an existing environment", err)
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(duplicate), duplicate))
+		ready := apimeta.FindStatusCondition(duplicate.Status.Conditions, "Ready")
+		if ready == nil || ready.Status != metav1.ConditionFalse || ready.Reason != "PoolClaimConflict" {
+			t.Fatal("environment claim conflict was not visible in Fleet status")
+		}
+		must(t, manager.Get(ctx, claimKey, claim))
+		if claim.ResourceVersion != before.ResourceVersion || !contract.Owns(original, claim, "ClaudeRunnerFleet") {
+			t.Fatal("duplicate Fleet rewrote the original environment claim")
+		}
+		if err := manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: duplicate.Name + "-orchestrator"}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
+			t.Fatal("duplicate environment started a polling deployment", err)
+		}
+	})
 	t.Run("schema-default-and-activation-guards", func(t *testing.T) {
 		f, hc, _ := fixture(t, "guards")
 		_ = hc
@@ -322,6 +632,24 @@ func TestAPIRecovery(t *testing.T) {
 		must(t, manager.Get(ctx, key, d))
 		if d.ResourceVersion != revision {
 			t.Fatal("unchanged reconcile rewrote Deployment")
+		}
+		network := &networkingv1.NetworkPolicy{}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(builders.Network(f)), network))
+		selector := network.Spec.PodSelector.DeepCopy()
+		network.Annotations = map[string]string{"fixture": "preserve"}
+		must(t, admin.Update(ctx, network))
+		_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(network), network))
+		if network.Annotations[contract.Group+"/declared-policy-digest"] != contract.PolicyDigest(f.Spec.Execution) || network.Annotations["fixture"] != "preserve" || !reflect.DeepEqual(selector, &network.Spec.PodSelector) {
+			t.Fatal("network annotation migration changed isolation or unrelated metadata")
+		}
+		networkVersion := network.ResourceVersion
+		_, err = fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+		must(t, err)
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(network), network))
+		if network.ResourceVersion != networkVersion {
+			t.Fatal("stable network annotation rewritten")
 		}
 	})
 	t.Run("network-approval-policy-revocation-and-optional-expiry", func(t *testing.T) {
