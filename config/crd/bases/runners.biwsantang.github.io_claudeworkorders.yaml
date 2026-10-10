@@ -72,8 +72,9 @@ spec:
                 - name
                 type: object
               execution:
-                description: ExecutionPolicy is deliberately narrower than PodSpec.
-                  All accepted inputs are frozen in a receipt.
+                description: |-
+                  ExecutionPolicy is deliberately narrower than PodSpec. Fleets may omit installation defaults.
+                  WorkOrders require the complete resolved policy and must never inherit defaults. All accepted inputs are frozen in a receipt.
                 properties:
                   clockMarginSeconds:
                     default: 300
@@ -293,16 +294,11 @@ spec:
                   workspaceSize:
                     default: 8Gi
                     type: string
-                required:
-                - clockMarginSeconds
-                - diagnosticRetentionSeconds
-                - maxTokenLifetimeSeconds
-                - proxy
-                - resources
-                - runnerImage
-                - securityRevision
-                - workspaceSize
                 type: object
+                x-kubernetes-validations:
+                - message: Receipts require complete resolved execution configuration
+                  rule: has(self.runnerImage) && has(self.securityRevision) && has(self.proxy)
+                    && has(self.resources)
               expiresAt:
                 format: date-time
                 type: string

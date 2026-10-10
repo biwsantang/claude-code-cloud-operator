@@ -1,0 +1,14 @@
+# Source-build preview. Published follow-up charts supply manager/hook digests.
+# Synthetic placeholders: choose qualified images before deploying.
+managerImage: example.invalid/manager@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+hookImage: example.invalid/hook@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+runtime:
+  image: example.invalid/runtime@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+network:
+  securityRevision: installation-v1
+  proxy:
+    url: http://proxy.proxy.svc:3128
+    namespace: proxy
+    podLabels:
+      app: proxy
+    port: 3128

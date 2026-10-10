@@ -55,7 +55,8 @@ def main():
         return
     f = json.loads(run('get', 'clauderunnerfleet', a.fleet, '-n', a.namespace, '-o', 'json'))
     if not f['spec'].get('suspended', True): raise SystemExit('Fleet must be suspended')
-    proxy = f['spec']['execution']['proxy']
+    effective = f.get('status', {}).get('effectiveConfiguration', {})
+    proxy = effective.get('execution', f['spec'].get('execution', {})).get('proxy')
     if proxy != {'url':'http://proxy.proxy.svc:3128','namespace':'proxy','podLabels':{'app':'proxy'},'port':3128}:
         raise SystemExit('Fleet does not select the synthetic proxy fixture')
     policies = json.loads(run('get','networkpolicy','-n',a.namespace,'-o','json'))['items']

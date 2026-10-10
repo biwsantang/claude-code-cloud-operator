@@ -37,3 +37,5 @@ Review [implementation evidence](testing/implementation-evidence.md) and the
 - [Runtime vulnerability findings and execution limits](testing/runtime-vulnerability-review.md)
 
 - [curl advisory triggers, evidence and unresolved review](testing/curl-advisory-assessment.md)
+
+- [Installation defaults and minimal Fleets](operations/fleet-defaults.md)

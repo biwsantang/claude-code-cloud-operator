@@ -106,7 +106,7 @@ func Expiry(token []byte, serverTime string, now time.Time, maxLifetime int64) (
 }
 
 // Run uses an uncached API client. It never reads Secrets; completion admission checks collisions.
-func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.Time) Result {
+func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.Time, defaults ...contract.FleetDefaults) Result {
 	if in.Namespace == "" || in.Fleet == "" || in.Pool == "" || in.Order == "" {
 		return fail("MissingInput", Permanent)
 	}
@@ -146,6 +146,14 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 			return fail("ReceiptMismatch", Permanent)
 		}
 	} else {
+		d := contract.FleetDefaults{}
+		if len(defaults) > 0 {
+			d = defaults[0]
+		}
+		f = contract.ResolveFleet(f, d)
+		if contract.ValidateFleet(f) != nil {
+			return fail("FleetConfigurationUnavailable", Retryable)
+		}
 		expiry, err := Expiry(token, in.ServerTime, now, f.Spec.Execution.MaxTokenLifetimeSeconds)
 		if err != nil {
 			return invalidCredential(err)
@@ -164,7 +172,7 @@ func Run(ctx context.Context, c client.Client, in Input, token []byte, now time.
 		}
 		if err := c.Create(ctx, w); err != nil {
 			if apierrors.IsAlreadyExists(err) {
-				return Run(ctx, c, in, token, now)
+				return Run(ctx, c, in, token, now, defaults...)
 			}
 			return fail("ReceiptWriteFailed", Classify(err))
 		}

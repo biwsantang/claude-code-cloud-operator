@@ -20,7 +20,7 @@ The public release unit is the OCI chart, manager image, hook image and raw inst
 manifests. No registry login, company account or AWS identity is required to fetch the operator.
 Supply your own Claude self-hosted environment credential and compatible development runtime image.
 The chart's default manager image is pinned to the released digest; `hook.json` in the GitHub Release
-records the hook digest for Fleet configuration. All images include Linux AMD64/ARM64.
+records the hook digest. The source follow-up supplies it as an installation default; RC2 still uses explicit Fleet fields. All images include Linux AMD64/ARM64.
 
 ## Prerequisites
 
@@ -83,7 +83,10 @@ and avoid copying its tracking identity into operator-created resources.
 ## Configure and activate a Fleet
 
 Copy the [suspended Fleet example](../../config/samples/runners_v1alpha1_clauderunnerfleet.yaml).
-Replace the environment ID, runtime and hook digests, resource requests, proxy policy and references.
+For the source follow-up, configure runtime and proxy once in [installation values](../../examples/operator-values.yaml),
+then set only the environment ID and Secret reference. See [inherited defaults](fleet-defaults.md).
+Published RC2 still requires the [explicit Fleet](../../config/samples/runners_v1alpha1_clauderunnerfleet-explicit.yaml)
+and lacks installation defaults.
 Session controls belong in `spec.execution.lifecycle`; see [lifecycle defaults and behavior](session-lifecycle.md).
 These lifecycle additions are source follow-up changes, absent from published `v0.1.0-rc.2` artifacts.
 Create the credential Secret externally with key `environment-secret`; never commit its value or put
@@ -114,8 +117,9 @@ Claude session users do not need Kubernetes Fleet or Secret write access.
 
 | Setting or credential | Owner / consumer |
 | --- | --- |
-| Helm `managerImage` | Shared Kubernetes operator controller |
-| Fleet `orchestratorImage`, `hookImage`, `execution.runnerImage` | Workloads generated for that Fleet |
+| Helm `managerImage`, `hookImage` | Shared operator release and compatible helper |
+| Helm `runtime`, `network` | Shared runtime and enforced proxy defaults |
+| Fleet `execution.runnerImage` | Optional custom development runtime; explicit legacy image fields still work |
 | Fleet `environmentID` and `environmentSecretRef` | That environment's polling orchestrators; Secret key is `environment-secret` |
 | Single-use assignment credential | Generated WorkOrder credential Secret mounted only in its session runner |
 

@@ -1,9 +1,9 @@
 # Two environments with one operator
 
 Install the operator once with Helm. Then copy `fleets.yaml` into your deployment or GitOps repository.
-It contains two complete, suspended user Fleet manifests in the operator namespace. Replace every
-placeholder environment ID and image digest, and supply your actual proxy configuration and network
-report references. New lifecycle settings require the PR #3 follow-up; published RC2 does not include them.
+It contains two minimal user Fleet manifests in the operator namespace; both default to suspended.
+Replace the environment IDs and supply the matching Secrets. Configure runtime and proxy once using
+[operator values](../operator-values.yaml). Network reports default to `<fleet-name>-network-report`. New lifecycle settings require the PR #3 follow-up; published RC2 does not include them.
 
 | Fleet | Claude environment | Existing Kubernetes Secret | Network report |
 | --- | --- | --- | --- |
@@ -30,12 +30,13 @@ kubectl --context YOUR_CONTEXT apply -f fleets.yaml
 ```
 
 Keep both Fleets suspended while reproducing network conformance and binding each report to its actual
-Fleet UID and declared policy digest. Then activate each independently through its manifest owner.
+Fleet UID and effective policy digest from `status.policyDigest`. Then activate each independently through its manifest owner.
 See [public installation](../../wiki/operations/public-installation.md) and
 [installation and drain](../../wiki/operations/install-and-drain.md) for the complete procedure.
 
-`managerImage` belongs to the shared operator Helm release. The Fleet owns `orchestratorImage`,
-`hookImage` and `execution.runnerImage`, plus its resources and lifecycle. Its polling replicas use
+The shared operator installation supplies manager/hook images and runtime/network defaults. Fleets
+may override their development runner image, resources and lifecycle. Explicit orchestrator/hook/proxy
+fields remain supported for existing administrator manifests. Its polling replicas use
 that Fleet's environment Secret. Each disposable session runner receives only its own single-use
 assignment credential; the environment key is not mounted in that runner. Rotating one environment
 key changes its pollers without rolling another Fleet's pollers.

@@ -23,6 +23,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -76,7 +77,8 @@ func TestAPIRecovery(t *testing.T) {
 	must(t, err)
 	server := webhook.NewServer(webhook.Options{Host: e.WebhookInstallOptions.LocalServingHost, Port: e.WebhookInstallOptions.LocalServingPort, CertDir: e.WebhookInstallOptions.LocalServingCertDir})
 	admissionReads := &faultReader{Reader: admin}
-	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Reader: admissionReads, Namespace: namespace, ManagerAccount: "manager"}})
+	installationDefaults := contract.FleetDefaults{RuntimeImage: "example.invalid/runtime@sha256:" + strings.Repeat("a", 64), HookImage: "example.invalid/hook@sha256:" + strings.Repeat("b", 64), SecurityRevision: "installation-v1", Proxy: &api.ProxyPolicy{URL: "http://proxy.proxy.svc:3128", Namespace: "proxy", PodLabels: map[string]string{"app": "proxy"}, Port: 3128}}
+	server.Register("/validate", &webadmission.Webhook{Handler: &admission.Handler{Defaults: installationDefaults, Reader: admissionReads, Namespace: namespace, ManagerAccount: "manager"}})
 	serverDone := make(chan error, 1)
 	go func() { serverDone <- server.Start(ctx) }()
 	defer func() {
@@ -147,6 +149,123 @@ func TestAPIRecovery(t *testing.T) {
 		}
 		return w
 	}
+	t.Run("minimal-fleet-inherits-installation-and-freezes-intake", func(t *testing.T) {
+		// Raw two-field input proves the API schema accepts the advertised manifest.
+		minimal := &unstructured.Unstructured{Object: map[string]interface{}{"apiVersion": api.GroupVersion.String(), "kind": "ClaudeRunnerFleet", "metadata": map[string]interface{}{"name": "minimal", "namespace": namespace}, "spec": map[string]interface{}{"environmentID": "ccpool_minimal", "environmentSecretRef": map[string]interface{}{"name": "minimal-environment"}}}}
+		must(t, admin.Create(ctx, minimal))
+		f := &api.ClaudeRunnerFleet{}
+		must(t, admin.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "minimal"}, f))
+		if !f.Spec.Suspended || f.Spec.HookImage != "" || f.Spec.Execution.RunnerImage != "" || f.Spec.NetworkReportRef.Name != "" {
+			t.Fatal("inherited configuration was written into spec")
+		}
+		fr := &controller.ClaudeRunnerFleetReconciler{Defaults: installationDefaults, Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }}
+		reconcile := func() {
+			_, err := fr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(f)})
+			must(t, err)
+			must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		}
+		reconcile()
+		reconcile()
+		if f.Status.EffectiveConfiguration == nil || f.Status.EffectiveConfiguration.HookImage != installationDefaults.HookImage || f.Spec.HookImage != "" {
+			t.Fatal("effective status missing or spec rewritten")
+		}
+		resolved := contract.ResolveFleet(f, installationDefaults)
+		if f.Status.PolicyDigest != contract.PolicyDigest(resolved.Spec.Execution) {
+			t.Fatal("network approval digest did not use effective policy")
+		}
+		f.Spec.Suspended = false
+		if err := admin.Update(ctx, f); err == nil {
+			t.Fatal("activation without credentials and network evidence accepted")
+		}
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		must(t, admin.Create(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "minimal-environment", Namespace: namespace}, Data: map[string][]byte{contract.EnvironmentKey: []byte("synthetic")}}))
+		f.Spec.Suspended = false
+		if err := admin.Update(ctx, f); err == nil {
+			t.Fatal("credentials alone waived network acceptance")
+		}
+		must(t, admin.Get(ctx, client.ObjectKeyFromObject(f), f))
+		report := contract.Report{FleetUID: string(f.UID), PolicyDigest: f.Status.PolicyDigest, TestedAt: time.Now().UTC(), ValidUntil: time.Now().Add(time.Hour).UTC(), DirectDenied: true, PrivateDenied: true, MetadataDenied: true, KubernetesDenied: true, ProxyAllowed: true, ProxyDenied: true, FreshPodTested: true, Evidence: "synthetic API test; not network acceptance"}
+		b, _ := json.Marshal(report)
+		must(t, admin.Create(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "minimal-network-report", Namespace: namespace}, Data: map[string]string{"report.json": string(b)}}))
+		f.Spec.Suspended = false
+		must(t, admin.Update(ctx, f))
+		reconcile()
+		dep := &appsv1.Deployment{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: "minimal-orchestrator"}, dep))
+		if *dep.Spec.Replicas != 2 || dep.Spec.Template.Spec.Containers[0].Image != installationDefaults.RuntimeImage || dep.Spec.Template.Spec.InitContainers[0].Image != installationDefaults.HookImage {
+			t.Fatal("poller images did not inherit installation defaults")
+		}
+		var pollerDefaults contract.FleetDefaults
+		for _, env := range dep.Spec.Template.Spec.Containers[0].Env {
+			if env.Name == "OPERATOR_FLEET_DEFAULTS" {
+				var err error
+				pollerDefaults, err = contract.DecodeDefaults(env.Value)
+				must(t, err)
+			}
+		}
+		if !reflect.DeepEqual(pollerDefaults, installationDefaults) {
+			t.Fatal("hook configuration differs from admission")
+		}
+		hookCfg := rest.CopyConfig(cfg)
+		hookCfg.Impersonate = rest.ImpersonationConfig{UserName: contract.ManagerUser(namespace, contract.HookAccount(f.Name)), Groups: []string{"system:authenticated", "system:serviceaccounts", "system:serviceaccounts:" + namespace}}
+		hc, err := client.New(hookCfg, client.Options{Scheme: scheme})
+		must(t, err)
+		payload := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf(`{"exp":%d}`, time.Now().Add(time.Hour).Unix())))
+		token := []byte("synthetic." + payload + ".not-a-signature")
+		input := hook.Input{Namespace: namespace, Fleet: f.Name, Pool: f.Spec.EnvironmentID, Order: "defaulted"}
+		result := hook.Run(ctx, hc, input, token, time.Now(), pollerDefaults)
+		if result.Code != 0 {
+			t.Fatalf("minimal Fleet intake failed: %s", result.Reason)
+		}
+		w := &api.ClaudeWorkOrder{}
+		must(t, manager.Get(ctx, client.ObjectKey{Namespace: namespace, Name: result.Name}, w))
+		if !reflect.DeepEqual(w.Spec.Execution, contract.AcceptedExecution(resolved)) {
+			t.Fatal("receipt did not freeze resolved defaults")
+		}
+		wr := &controller.ClaudeWorkOrderReconciler{Defaults: installationDefaults, Client: manager, Scheme: scheme, AdmissionReady: func(context.Context) bool { return true }, CreatePod: func(ctx context.Context, p *corev1.Pod) error { return manager.Create(ctx, p) }}
+		_, err = wr.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(w)})
+		must(t, err)
+		pod := &corev1.Pod{}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), pod))
+		if pod.Spec.Containers[0].Image != installationDefaults.RuntimeImage || pod.Spec.InitContainers[0].Image != installationDefaults.HookImage || *pod.Spec.AutomountServiceAccountToken {
+			t.Fatal("defaulted session runtime or isolation incorrect")
+		}
+		frozen := w.DeepCopy()
+		changed := pollerDefaults
+		changed.RuntimeImage = "example.invalid/changed@sha256:" + strings.Repeat("c", 64)
+		changed.HookImage = "example.invalid/changed-hook@sha256:" + strings.Repeat("d", 64)
+		result = hook.Run(ctx, hc, input, token, time.Now(), changed)
+		if result.Code != 0 || result.Reason != "Redelivered" {
+			t.Fatal("defaults change broke completed redelivery")
+		}
+		must(t, manager.Get(ctx, client.ObjectKeyFromObject(w), w))
+		if !reflect.DeepEqual(w.Spec, frozen.Spec) {
+			t.Fatal("defaults update rewrote accepted intent")
+		}
+		input.Order = "stale-poller"
+		if hook.Run(ctx, hc, input, token, time.Now(), changed).Code != hook.Retryable {
+			t.Fatal("stale poller defaults were accepted or permanently discarded")
+		}
+		changed = pollerDefaults
+		changed.HookImage = "example.invalid/changed-hook@sha256:" + strings.Repeat("d", 64)
+		input.Order = "stale-helper"
+		if hook.Run(ctx, hc, input, token, time.Now(), changed).Code != hook.Retryable {
+			t.Fatal("stale helper configuration must retry")
+		}
+		// A WorkOrder cannot inherit a missing runtime even though Fleets can.
+		forged := frozen.DeepCopy()
+		forged.Name = contract.Name(f.Spec.EnvironmentID, "missing-image")
+		forged.ResourceVersion = ""
+		forged.UID = ""
+		forged.Status = api.ClaudeWorkOrderStatus{}
+		forged.Spec.OrderID = "missing-image"
+		forged.Spec.Complete = false
+		forged.Spec.Execution.RunnerImage = ""
+		forged.Spec.CredentialSecretRef.Name = forged.Name + "-credential"
+		if err := hc.Create(ctx, forged); err == nil {
+			t.Fatal("receipt with unresolved execution accepted")
+		}
+	})
 	t.Run("lifecycle-intake-freeze-and-schema-compatibility", func(t *testing.T) {
 		f, hc, token := fixture(t, "lifecycle")
 		if f.Spec.Execution.Lifecycle != nil {

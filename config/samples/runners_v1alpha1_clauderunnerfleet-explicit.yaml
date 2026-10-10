@@ -1,0 +1,52 @@
+# Advanced/legacy example: every infrastructure setting is explicit.
+# Administrator-owned workload manifest; apply separately after operator admission is ready.
+apiVersion: runners.biwsantang.github.io/v1alpha1
+kind: ClaudeRunnerFleet
+metadata:
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+  labels:
+    app.kubernetes.io/name: claude-code-cloud-operator
+  name: example
+  namespace: cloud-operator-system
+spec:
+  # Activate only after network conformance binds the report to this Fleet UID/policy.
+  suspended: true
+  environmentID: ccpool_REPLACE_ME
+  # Existing same-namespace Secret with key environment-secret; used by this Fleet's pollers.
+  # Disposable session runners receive separate assignment credentials.
+  environmentSecretRef:
+    name: example-environment
+  networkReportRef:
+    name: example-network-report
+  # Replace all three example digests with verified images before activation.
+  orchestratorImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  hookImage: example.invalid/hook@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  # Polling availability; this is not a concurrent-session limit.
+  orchestratorReplicas: 2
+  execution:
+    runnerImage: example.invalid/runtime@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    securityRevision: replace-after-network-acceptance
+    proxy:
+      url: http://proxy.proxy.svc:3128
+      namespace: proxy
+      podLabels:
+        app: proxy
+      port: 3128
+    resources:
+      requests:
+        cpu: "1"
+        memory: 2Gi
+      limits:
+        memory: 4Gi
+    workspaceSize: 8Gi
+    # Optional immutable administrator ConfigMap; version the name when changing it.
+    # hostConfigRef:
+    #   name: example-host-config-v1
+    # Applied to new assignments; each session workspace is disposable.
+    lifecycle:
+      idleMinutes: 30
+      maxSessionMinutes: 480
+      shutdownWaitSeconds: 300
+      promptToSave: true
+      pushOutcomeOnRelease: false

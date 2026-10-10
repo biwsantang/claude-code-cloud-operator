@@ -220,6 +220,8 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: claude-code-cloud-operator
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -233,6 +235,10 @@ spec:
         command:
         - /manager
         env:
+        - name: FLEET_DEFAULTS
+          value: '{}'
+        - name: OPERATOR_HOOK_IMAGE
+          value: example.invalid/hook@sha256:0000000000000000000000000000000000000000000000000000000000000000
         - name: WATCH_NAMESPACE
           valueFrom:
             fieldRef:

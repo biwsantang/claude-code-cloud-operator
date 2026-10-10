@@ -45,3 +45,5 @@ drain and remove fleets before uninstalling controllers or CRDs. Forced finalize
 Roll back by suspending, keeping the network boundary in place, reverting future image/configuration,
 and allowing current runners to finish. Never bring old and replacement provisioning systems online for the same
 pool during cutover. These procedures require runtime verification before release.
+
+- [Installation defaults and minimal Fleets](fleet-defaults.md)

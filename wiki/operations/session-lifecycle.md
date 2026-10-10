@@ -92,7 +92,8 @@ assignment credentials rather than the shared environment key.
 Two orchestrator replicas improve polling availability, not total concurrent session capacity. Use
 Anthropic organization capacity/budget, namespace ResourceQuotas, node autoscaling and suitable CPU/
 memory requests to bound aggregate usage; there is no custom quota controller. Defaults are 8Gi
-workspace, 1 CPU and 2Gi memory requested, 4Gi memory limit, with no CPU limit.
+workspace, 2 CPUs and 4Gi memory requested, 4Gi memory limit, with no CPU limit.
+These resource defaults are resolved only for Fleets; complete legacy budgets remain unchanged.
 
 Suspend stops new intake and leaves active sessions running. Drain stops intake and waits for native
 finish/release before deleting resources. Abort requests Pod deletion and can interrupt work after its
@@ -102,18 +103,14 @@ diagnostic retention controls receipts, neither is a session inactivity clock.
 ## Operator installation and user Fleet configuration
 
 The Helm chart installs only the operator, RBAC, admission/certificate resources and CRD definitions.
-It does not create a Fleet or accept environment/session policy in its values. Source installations
-supply `managerImage`; release packaging supplies the published manager digest. The Fleet remains an
-administrator-owned manifest, independent of the operator release.
+It does not create a Fleet or accept environment credentials/session policy in its values. Source installations
+supply manager/hook images; follow-up release packaging supplies both digests. Installation values provide
+shared runtime and network defaults while the Fleet remains a user-owned manifest.
 
-Copy the [standalone Fleet example](../../config/samples/runners_v1alpha1_clauderunnerfleet.yaml) into
-your deployment or GitOps repository. Supply existing environment Secret and network report references,
-environment ID, proxy selectors/URL, security revision and tested digest-pinned runtime/hook images.
-Use the compatible hook digest recorded in the operator release's `hook.json`. No organization runtime
-or environment key is supplied by the chart. Optional `execution.hostConfigRef` points to an existing
-immutable namespace ConfigMap; version its name when changing administrator settings. Existing image
-configuration and administrator files are materialized as regular files, with executable hook modes
-retained, before native startup snapshots them.
+The [minimal Fleet](../../config/samples/runners_v1alpha1_clauderunnerfleet.yaml) needs its environment ID
+and existing Secret reference. Optional lifecycle, resources and custom runner images stay on the Fleet.
+See [default resolution and network acceptance](fleet-defaults.md). Optional `execution.hostConfigRef`
+points to an existing immutable namespace ConfigMap; version its name when changing settings.
 
 With direct Helm, install the operator with `--wait`, verify the certificate and actual admission dry-run,
 then apply the separate Fleet manifest with `kubectl`. Keep `spec.suspended: true` initially. Reproduce
@@ -127,7 +124,7 @@ network acceptance procedure. The example's prune/delete annotations protect its
 drain it. Explicitly suspend/drain Fleets before removing the operator. Helm uninstall does not own or
 delete user Fleets.
 
-On upgrades, suspend intake, apply compatible CRDs and update the Fleet hook to this operator version
+On upgrades, suspend intake, apply compatible CRDs and update the installation hook to this operator version (or any explicit legacy Fleet override)
 before resuming new intake; older hooks lack the new configuration helper. Keep pinned runtime
 qualification separate from chart publication. See [public installation](public-installation.md) and
 [drain instructions](install-and-drain.md).

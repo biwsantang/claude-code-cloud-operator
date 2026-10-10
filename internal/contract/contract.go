@@ -64,15 +64,11 @@ func ValidateExecution(p api.ExecutionPolicy) error {
 	if !digestImage.MatchString(p.RunnerImage) || !safeID.MatchString(p.SecurityRevision) {
 		return errors.New("execution image or security revision is invalid")
 	}
-	u, err := url.Parse(p.Proxy.URL)
-	if err != nil || u.Scheme != "http" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.Hostname() == "" || u.Port() != fmt.Sprint(p.Proxy.Port) {
-		return errors.New("proxy must be an explicit HTTP host and matching port")
+	if err := validateProxy(p.Proxy); err != nil {
+		return err
 	}
-	if p.Proxy.Namespace == "" || len(p.Proxy.PodLabels) == 0 || p.Proxy.Port < 1 || p.Proxy.Port > 65535 {
-		return errors.New("proxy peer selector is required")
-	}
-	if len(validation.IsDNS1123Label(p.Proxy.Namespace)) != 0 || !validLabels(p.Proxy.PodLabels) || !validLabels(p.NodeSelector) {
-		return errors.New("proxy namespace or placement selectors are invalid")
+	if !validLabels(p.NodeSelector) {
+		return errors.New("placement selectors are invalid")
 	}
 	for _, toleration := range p.Tolerations {
 		if err := validateToleration(toleration); err != nil {
@@ -81,14 +77,6 @@ func ValidateExecution(p api.ExecutionPolicy) error {
 	}
 	if p.HostConfigRef != nil && len(validation.IsDNS1123Subdomain(p.HostConfigRef.Name)) != 0 {
 		return errors.New("host configuration reference is invalid")
-	}
-	// Approved DNS proxy service only; IP literals, localhost and arbitrary hosts are disallowed.
-	if !strings.HasSuffix(u.Hostname(), "."+p.Proxy.Namespace+".svc") && !strings.HasSuffix(u.Hostname(), "."+p.Proxy.Namespace+".svc.cluster.local") {
-		return errors.New("proxy must name a Service in its approved namespace")
-	}
-	serviceName := strings.Split(u.Hostname(), ".")[0]
-	if len(validation.IsDNS1035Label(serviceName)) != 0 || u.Hostname() != serviceName+"."+p.Proxy.Namespace+".svc" && u.Hostname() != serviceName+"."+p.Proxy.Namespace+".svc.cluster.local" {
-		return errors.New("proxy must name exactly one valid Service")
 	}
 	if len(p.Resources.Claims) > 0 || len(p.Resources.Requests) != 2 || len(p.Resources.Limits) != 1 {
 		return errors.New("resources require CPU/memory requests and memory limit only")
@@ -105,6 +93,28 @@ func ValidateExecution(p api.ExecutionPolicy) error {
 	}
 	if p.MaxTokenLifetimeSeconds < 60 || p.MaxTokenLifetimeSeconds > 604800 || p.ClockMarginSeconds < 60 || p.ClockMarginSeconds > 3600 || p.DiagnosticRetentionSeconds < 300 || p.DiagnosticRetentionSeconds > 604800 {
 		return errors.New("retention bounds are invalid")
+	}
+	return nil
+}
+
+func validateProxy(p api.ProxyPolicy) error {
+	u, err := url.Parse(p.URL)
+	if err != nil || u.Scheme != "http" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.Hostname() == "" || u.Port() != fmt.Sprint(p.Port) {
+		return errors.New("proxy must be an explicit HTTP host and matching port")
+	}
+	if p.Namespace == "" || len(p.PodLabels) == 0 || p.Port < 1 || p.Port > 65535 {
+		return errors.New("proxy peer selector is required")
+	}
+	if len(validation.IsDNS1123Label(p.Namespace)) != 0 || !validLabels(p.PodLabels) {
+		return errors.New("proxy namespace or placement selectors are invalid")
+	}
+	// Approved DNS proxy service only; IP literals, localhost and arbitrary hosts are disallowed.
+	if !strings.HasSuffix(u.Hostname(), "."+p.Namespace+".svc") && !strings.HasSuffix(u.Hostname(), "."+p.Namespace+".svc.cluster.local") {
+		return errors.New("proxy must name a Service in its approved namespace")
+	}
+	serviceName := strings.Split(u.Hostname(), ".")[0]
+	if len(validation.IsDNS1035Label(serviceName)) != 0 || u.Hostname() != serviceName+"."+p.Namespace+".svc" && u.Hostname() != serviceName+"."+p.Namespace+".svc.cluster.local" {
+		return errors.New("proxy must name exactly one valid Service")
 	}
 	return nil
 }

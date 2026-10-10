@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	api "github.com/biwsantang/claude-code-cloud-operator/api/v1alpha1"
+	"github.com/biwsantang/claude-code-cloud-operator/internal/contract"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/hook"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/kubeclient"
 	"github.com/biwsantang/claude-code-cloud-operator/internal/sessionconfig"
@@ -79,7 +80,11 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
 	defer cancel()
-	exit(hook.Run(ctx, c, in, token, time.Now()))
+	defaults, err := contract.DecodeDefaults(os.Getenv("OPERATOR_FLEET_DEFAULTS"))
+	if err != nil {
+		exit(hook.Result{Code: hook.Retryable, Reason: "InstallationConfigurationInvalid"})
+	}
+	exit(hook.Run(ctx, c, in, token, time.Now(), defaults))
 }
 func exit(r hook.Result) { fmt.Fprintln(os.Stderr, r.Reason); os.Exit(r.Code) }
 func install() {

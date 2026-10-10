@@ -153,11 +153,12 @@ jobs:
     - name: Package chart and digest-pinned raw installation
       run: |
         manager=$(jq -r .image release/manager.json)
-        sed "s#^managerImage:.*#managerImage: \"$manager\"#" charts/claude-code-cloud-operator/values.yaml > /tmp/release-values.yaml
+        hook=$(jq -r .image release/hook.json)
+        sed -e "s#^managerImage:.*#managerImage: \"$manager\"#" -e "s#^hookImage:.*#hookImage: \"$hook\"#" charts/claude-code-cloud-operator/values.yaml > /tmp/release-values.yaml
         mv /tmp/release-values.yaml charts/claude-code-cloud-operator/values.yaml
         helm lint charts/claude-code-cloud-operator
         helm package charts/claude-code-cloud-operator --version "$VERSION" --app-version "$VERSION" --destination release
-        sed "s#example.invalid/operator@sha256:$(printf '0%.0s' {1..64})#$manager#g" deploy/install.yaml > release/install.yaml
+        sed -e "s#example.invalid/operator@sha256:$(printf '0%.0s' {1..64})#$manager#g" -e "s#example.invalid/hook@sha256:$(printf '0%.0s' {1..64})#$hook#g" deploy/install.yaml > release/install.yaml
         cp deploy/uninstall.yaml release/uninstall.yaml
         cp LICENSE release/LICENSE
       env:
@@ -223,6 +224,7 @@ jobs:
     - name: Create release
       run: |
         manager=$(jq -r .image release/manager.json)
+        hook=$(jq -r .image release/hook.json)
         {
           echo "Chart: \`oci://$(jq -r .chart release/chart.json)\`"
           echo "Chart digest: \`$(jq -r .digest release/chart.json)\`"

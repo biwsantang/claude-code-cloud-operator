@@ -74,12 +74,14 @@ helm install cloud-operator charts/claude-code-cloud-operator --namespace cloud-
 
 Helm leaves namespace ownership to the administrator. Raw/Kustomize installation bootstraps its namespace.
 CRDs and the raw namespace carry explicit Argo prune/deletion protection.
-Replace the placeholder image in `config/install` before using raw manifests. Keep Fleets suspended until
+Replace both placeholder images and configure `FLEET_DEFAULTS` in `config/install` before using raw manifests. Keep Fleets suspended until
 the installation, proxy/network and dedicated vendor acceptance checks pass. The chart does not create
 Fleet instances, external Claude environments, organization settings or cloud credentials.
 Copy the [standalone Fleet example](config/samples/runners_v1alpha1_clauderunnerfleet.yaml) into your
 deployment repository, configure its environment/resources/lifecycle, and apply it separately after
-admission is ready. Operator Helm values contain only the manager image; there is no `fleet.enabled` switch.
+admission is ready. The operator installation supplies shared runtime/helper/network defaults; there is no `fleet.enabled` switch.
+The [installation values example](examples/operator-values.yaml) configures them once. The minimal Fleet
+needs only its environment ID and Secret reference; see [inherited defaults](wiki/operations/fleet-defaults.md).
 For multiple Claude environments, use [one Fleet per environment](examples/multiple-environments/README.md),
 each with its own environment Secret reference. The operator installation is shared; disposable runners
 receive per-assignment credentials.
